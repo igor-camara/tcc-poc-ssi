@@ -62,6 +62,7 @@ start_network() {
     ./manage build
     echo "Build Finalizado!"
     ./manage start
+    cd ..
     echo "Nodes iniciados! Acesse em http://localhost:9000/"
 }
 
@@ -115,6 +116,12 @@ update_files() {
     echo "Arquivos atualizados com sucesso!"
 }
 
+start_agents() {
+    echo "Iniciando agentes (Alice e Faber)..."
+    cd agents && docker compose up --build -d
+    echo "Agentes iniciados!"
+}
+
 case "${COMMAND}" in
     setup|init)
         create_venv_if_not_exists
@@ -164,6 +171,8 @@ case "${COMMAND}" in
         clone_von_network
         update_files
         start_network
+        sleep 5
+        start_agents
         ;;
     help|*)
         echo "Uso: make-py <comando>"
