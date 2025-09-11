@@ -69,7 +69,7 @@ start_network() {
 stop_network() {
     echo "Fechando von-network ..."
     cd von-network && ./manage down
-    cd von-network && ./manage stop
+    ./manage stop
     echo "Network fechada"
 }
 
@@ -94,6 +94,14 @@ update_files() {
         echo "✓ Dockerfile copiado para von-network/"
     else
         echo "⚠ Dockerfile não encontrado em files/"
+    fi
+
+    # Verificar e copiar docker-compose.yml
+    if [ -f "files/Dockerfile" ]; then
+        cp files/docker-compose.yml von-network/docker-compose.yml
+        echo "✓ docker-compose copiado para von-network/"
+    else
+        echo "⚠ docker-compose não encontrado em files/"
     fi
 
     # Verificar e copiar requirements.txt

@@ -1,0 +1,75 @@
+networks:
+  von:
+    name: von
+    external: true
+
+services:
+  faber: # Issuer/Verifier
+    image: bcgovimages/aries-cloudagent:py3.12_1.2.0
+    environment:
+      - ACAPY_GENESIS_URL=http://webserver:8000/genesis
+    command: >
+      start
+      --endpoint http://faber:8020
+      --label faber.agent
+      --inbound-transport http 0.0.0.0 8020
+      --outbound-transport http
+      --admin 0.0.0.0 8021
+      --admin-insecure-mode
+      --wallet-type askar
+      --wallet-name faber.agent916333
+      --wallet-key faber.agent916333
+      --preserve-exchange-records
+      --auto-provision
+      --genesis-url http://webserver:8000/genesis
+      --trace-target log
+      --trace-tag acapy.events
+      --trace-label faber.agent.trace
+      --auto-ping-connection
+      --auto-respond-messages
+      --auto-accept-invites
+      --auto-accept-requests
+      --auto-respond-credential-proposal
+      --auto-respond-credential-offer
+      --auto-respond-credential-request
+      --auto-store-credential
+    ports:
+      - "8020:8020"
+      - "8021:8021"
+    networks:
+      - von
+
+  alice: # Holder
+    image: bcgovimages/aries-cloudagent:py3.12_1.2.0
+    environment:
+      - ACAPY_GENESIS_URL=http://webserver:8000/genesis
+    command: >
+      start
+      --endpoint http://alice:8030
+      --label alice.agent
+      --inbound-transport http 0.0.0.0 8030
+      --outbound-transport http
+      --admin 0.0.0.0 8031
+      --admin-insecure-mode
+      --wallet-type askar
+      --wallet-name alice.agent420695
+      --wallet-key alice.agent420695
+      --preserve-exchange-records
+      --auto-provision
+      --genesis-url http://webserver:8000/genesis
+      --trace-target log
+      --trace-tag acapy.events
+      --trace-label alice.agent.trace
+      --auto-ping-connection
+      --auto-respond-messages
+      --auto-accept-invites
+      --auto-accept-requests
+      --auto-respond-credential-proposal
+      --auto-respond-credential-offer
+      --auto-respond-credential-request
+      --auto-store-credential
+    ports:
+      - "8030:8030"
+      - "8031:8031"
+    networks:
+      - von
