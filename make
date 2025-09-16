@@ -9,7 +9,7 @@ COMMAND=$(toLower ${1})
 
 # Função para criar venv se não existir
 create_venv_if_not_exists() {
-    if [ ! -d "venv" ]; then
+    if [ ! -d "../venv" ]; then
         echo "Criando ambiente virtual..."
         python3 -m venv venv
         echo "Ambiente virtual criado com sucesso!"
@@ -18,8 +18,8 @@ create_venv_if_not_exists() {
 
 # Função para ativar o venv
 activate_venv() {
-    if [ -d "venv" ]; then
-        source venv/bin/activate
+    if [ -d "../venv" ]; then
+        source ../venv/bin/activate
         echo "Ambiente virtual ativado!"
     else
         echo "Erro: Ambiente virtual não encontrado!"
@@ -40,8 +40,8 @@ clone_von_network() {
 
 # Função para limpar
 clean() {
-    if [ -d "venv" ]; then
-        rm -rf venv
+    if [ -d "../venv" ]; then
+        rm -rf ../venv
         echo "Ambiente virtual removido!"
     else
         echo "Nenhum ambiente virtual encontrado para remover."
@@ -118,7 +118,7 @@ update_files() {
 
 start_agents() {
     echo "Iniciando agentes (Alice e Faber)..."
-    cd agents && docker compose up --build -d
+    cdocker compose up --build -d
     echo "Agentes iniciados!"
 }
 
@@ -166,8 +166,8 @@ case "${COMMAND}" in
         update_files
         ;;
     run-env)
-        create_venv_if_not_exists
-        activate_venv
+        #create_venv_if_not_exists
+        #activate_venv
         clone_von_network
         update_files
         start_network
