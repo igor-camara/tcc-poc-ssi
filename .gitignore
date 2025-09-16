@@ -1,2 +1,8 @@
 venv/
 von-network/
+__pycache__/
+.env
+*.db
+node_modules/
+dist/
+.vscode/
