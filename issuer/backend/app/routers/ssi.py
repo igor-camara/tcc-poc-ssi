@@ -2,7 +2,7 @@
 SSI (Self-Sovereign Identity) routes for FastAPI
 """
 import asyncio
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Header
 from app.schemas import (
     CreateInvitationResponse, CreateSchemaRequest, SchemaResponse,
     CreateCredentialDefinitionRequest, CredentialDefinitionResponse,
@@ -31,16 +31,13 @@ async def create_connection_invitation(
         # Get optional parameters
         alias = request.get("alias", f"Issuer-{current_user.email}")
         auto_accept = request.get("auto_accept", True)
-        
         # Create invitation
         invitation_data = await ssi_service.create_invitation(
             alias=alias,
             auto_accept=auto_accept
         )
-        
         return CreateInvitationResponse(
-            connection_id=invitation_data["connection_id"],
-            invitation=invitation_data["invitation"],
+            connection_id=invitation_data['invitation']['@id'],
             invitation_url=invitation_data["invitation_url"],
             alias=alias
         )
@@ -54,35 +51,49 @@ async def create_connection_invitation(
             detail=f"Falha ao processar convite: {str(e)}"
         )
 
-@router.post("/create-certificate", response_model=SchemaResponse)
-async def create_certificate(
+@router.post("/create-credential", response_model=SchemaResponse)
+async def create_credential(
     request: CreateSchemaRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    x_public_did: str = Header(None, alias="x-did"),
+    x_public_verkey: str = Header(None, alias="x-verkey")
 ):
     """
-    Create a certificate schema and credential definition
+    Create a credential schema and credential definition using user's public DID
     """
     try:
-        ssi_service = get_ssi_service()
+        if not x_public_did:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Public DID é obrigatório para criar credential definition"
+            )
         
+        if not x_public_verkey:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Public Verkey é obrigatório para criar credential definition"
+            )
+            
+        ssi_service = get_ssi_service()
         # Create schema
         schema_data = await ssi_service.create_schema(
+            schema_issuer_did=x_public_did,
             schema_name=request.schema_name,
             schema_version=request.schema_version,
             attributes=request.attributes,
             created_by=current_user.id
         )
-        
-        # Create credential definition
+        # Create credential definition using public DID
         cred_def_data = await ssi_service.create_credential_definition(
             schema_id=schema_data["schema_id"],
             tag="default",
-            support_revocation=False
+            support_revocation=False,
+            public_did=x_public_did  # Pass the public DID
         )
         
         return SchemaResponse(
             schema_id=schema_data["schema_id"],
-            schema=schema_data,
+            schema_def=schema_data,
             schema_name=request.schema_name,
             schema_version=request.schema_version,
             attributes=request.attributes

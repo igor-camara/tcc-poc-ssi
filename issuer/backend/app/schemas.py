@@ -110,7 +110,6 @@ class ConnectionRecord(BaseModel):
 class CreateInvitationResponse(BaseModel):
     """Create invitation response model"""
     connection_id: str = Field(..., description="Connection ID created")
-    invitation: Dict[str, Any] = Field(..., description="Invitation object")
     invitation_url: str = Field(..., description="Invitation URL")
     alias: Optional[str] = Field(None, description="Connection alias")
 
@@ -118,7 +117,7 @@ class CreateInvitationResponse(BaseModel):
 class SchemaResponse(BaseModel):
     """Schema response model"""
     schema_id: str = Field(..., description="Schema ID on the ledger")
-    schema: Dict[str, Any] = Field(..., description="Schema definition")
+    schema_def: Dict[str, Any] = Field(..., description="Schema definition")
     schema_name: str = Field(..., description="Schema name")
     schema_version: str = Field(..., description="Schema version")
     attributes: list[str] = Field(..., description="Schema attributes")

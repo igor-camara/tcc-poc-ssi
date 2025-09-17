@@ -51,26 +51,36 @@ class SSIService:
             dict: Invitation data including connection_id, invitation, and invitation_url
         """
         try:
+            # Create invitation body with minimum necessary parameters
+            invitation_body = {}
+            
+            if alias:
+                invitation_body["alias"] = alias
+                invitation_body["my_label"] = "Invitation to " + alias
+            
+            # Set auto accept behavior
+            if auto_accept:
+                invitation_body["accept"] = ["didcomm/aip1", "didcomm/aip2;env=rfc19"]
+            
+            # Use default handshake protocols
+            invitation_body["handshake_protocols"] = ["https://didcomm.org/didexchange/1.0"]
+
             # Create invitation using ACA-Py
-            result = await self.controller.connection.create_invitation(
-                alias=alias,
-                auto_accept=auto_accept,
-                public=True,  # Use public DID if available
-                multi_use=False  # Single use invitation
+            result = await self.controller.out_of_band.create_invitation(
+                body=invitation_body
             )
             
             invitation_data = result.to_dict() if hasattr(result, 'to_dict') else result
-            
             # Store connection in database
             connection = ConnectionModel(
-                connection_id=invitation_data["connection_id"],
+                connection_id=invitation_data['invitation']['@id'],
                 state="invitation",
                 alias=alias,
                 metadata={"auto_accept": auto_accept}
             )
             connection.save()
             
-            print(f"Created invitation for connection {invitation_data['connection_id']}")
+            print(f"Created invitation for connection {invitation_data['invitation']['@id']}")
             return invitation_data
             
         except Exception as e:
@@ -141,7 +151,7 @@ class SSIService:
     
     # ============ Schema Management ============
     
-    async def create_schema(self, schema_name: str, schema_version: str, attributes: List[str], created_by: Optional[str] = None) -> Dict[str, Any]:
+    async def create_schema(self, schema_issuer_did:str, schema_name: str, schema_version: str, attributes: List[str], created_by: Optional[str] = None) -> Dict[str, Any]:
         """
         Create a new credential schema on the ledger
         
@@ -161,7 +171,6 @@ class SSIService:
                 "schema_version": schema_version,
                 "attributes": attributes
             }
-            
             result = await self.controller.schema.publish_schema(body=schema_body)
             schema_data = result.to_dict() if hasattr(result, 'to_dict') else result
             
@@ -383,47 +392,6 @@ class SSIService:
             result = await self.controller.wallet.create_did(body={"key_type": "ed25519"})
             
             did_info = result.result.to_dict()
-            
-            print(f"Created DID: {did_info.get('did')} with verkey: {did_info.get('verkey')}")
-            
-            return {
-                'did': did_info.get('did'),
-                'verkey': did_info.get('verkey'),
-                'metadata': did_info.get('metadata', {}),
-                'alias': alias
-            }
-            
-        except Exception as e:
-            print(f"Failed to create DID: {str(e)}")
-            raise Exception(f"Erro ao criar DID: {str(e)}")
-    
-    async def register_did_on_ledger(self, did, verkey, alias=None):
-        """
-        Register DID on the ledger (von-network)
-        
-        Args:
-            did: DID to register
-            verkey: Verification key
-            alias: Optional alias
-            
-        Returns:
-            bool: Success status
-        """
-        try:
-            result = await self.controller.ledger.register_nym(
-                did=did,
-                verkey=verkey,
-                alias=alias,
-                role=None  # Regular identity, not a trustee/steward
-            )
-            
-            print(f"Registered DID {did} on ledger")
-            return True
-            
-        except Exception as e:
-            print(f"Failed to register DID on ledger: {str(e)}")
-            print("Continuing without ledger registration")
-            return False
             
             print(f"Created DID: {did_info.get('did')} with verkey: {did_info.get('verkey')}")
             
