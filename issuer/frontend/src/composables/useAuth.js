@@ -24,9 +24,13 @@ export function useAuth() {
       
       token.value = authToken
       user.value = userData
+
+      console.log(user)
       
       // Salvar token no localStorage
       localStorage.setItem('token', authToken)
+      localStorage.setItem('did', user.value.did)
+      localStorage.setItem('verkey', user.value.verkey)
       
       return { success: true }
     } catch (err) {
@@ -51,6 +55,8 @@ export function useAuth() {
       
       // Salvar token no localStorage
       localStorage.setItem('token', authToken)
+      localStorage.setItem('did', user.value.did)
+      localStorage.setItem('verkey', user.value.verkey)
       
       return { success: true }
     } catch (err) {
@@ -65,6 +71,8 @@ export function useAuth() {
     user.value = null
     token.value = null
     localStorage.removeItem('token')
+    localStorage.removeItem('did')
+    localStorage.removeItem('verkey')
   }
   
   const checkAuth = async () => {
