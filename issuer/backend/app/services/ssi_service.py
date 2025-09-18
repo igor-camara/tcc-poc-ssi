@@ -173,10 +173,9 @@ class SSIService:
             }
             result = await self.controller.schema.publish_schema(body=schema_body)
             schema_data = result.to_dict() if hasattr(result, 'to_dict') else result
-            
             # Store schema in database
             schema = SchemaModel(
-                schema_id=schema_data["schema_id"],
+                schema_id=schema_data['sent']['schema']["id"],
                 schema_name=schema_name,
                 schema_version=schema_version,
                 attributes=attributes,
@@ -185,14 +184,14 @@ class SSIService:
             )
             schema.save()
             
-            print(f"Created schema {schema_data['schema_id']}")
+            print(f"Created schema {schema_data['sent']['schema']['id']}")
             return schema_data
             
         except Exception as e:
             print(f"Failed to create schema: {str(e)}")
             raise Exception(f"Erro ao criar schema: {str(e)}")
     
-    async def create_credential_definition(self, schema_id: str, tag: str = "default", support_revocation: bool = False) -> Dict[str, Any]:
+    async def create_credential_definition(self, schema_id: str, support_revocation: bool = False) -> Dict[str, Any]:
         """
         Create a credential definition based on a schema
         
@@ -208,14 +207,13 @@ class SSIService:
             # Create credential definition using ACA-Py
             cred_def_body = {
                 "schema_id": schema_id,
-                "tag": tag,
                 "support_revocation": support_revocation
             }
             
             result = await self.controller.credential_definition.publish_cred_def(body=cred_def_body)
             cred_def_data = result.to_dict() if hasattr(result, 'to_dict') else result
             
-            print(f"Created credential definition {cred_def_data['credential_definition_id']}")
+            print(f"Created credential definition {cred_def_data['sent']['credential_definition_id']}")
             return cred_def_data
             
         except Exception as e:

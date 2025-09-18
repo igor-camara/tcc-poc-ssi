@@ -83,16 +83,15 @@ async def create_credential(
             attributes=request.attributes,
             created_by=current_user.id
         )
+
         # Create credential definition using public DID
         cred_def_data = await ssi_service.create_credential_definition(
-            schema_id=schema_data["schema_id"],
-            tag="default",
+            schema_id=schema_data['sent']['schema']["id"],
             support_revocation=False,
-            public_did=x_public_did  # Pass the public DID
         )
         
         return SchemaResponse(
-            schema_id=schema_data["schema_id"],
+            schema_id=schema_data['sent']['schema']["id"],
             schema_def=schema_data,
             schema_name=request.schema_name,
             schema_version=request.schema_version,
