@@ -118,7 +118,7 @@ update_files() {
 
 start_agents() {
     echo "Iniciando agentes (Alice e Faber)..."
-    cdocker compose up --build -d
+    docker compose up --build -d
     echo "Agentes iniciados!"
 }
 
