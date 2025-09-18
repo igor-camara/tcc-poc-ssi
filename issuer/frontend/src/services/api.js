@@ -2,20 +2,33 @@ import axios from 'axios'
 
 // Configuração base do axios
 const apiService = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8001/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:7000/api',
   headers: {
     'Content-Type': 'application/json',
+    'with-credentials': true
   },
   timeout: 10000,
 })
 
-// Interceptor para adicionar token de autenticação
+// Interceptor para adicionar token de autenticação e headers DID/verkey
 apiService.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
+    const did = localStorage.getItem('did')
+    const verkey = localStorage.getItem('verkey')
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+    
+    if (did) {
+      config.headers['x-did'] = did
+    }
+    
+    if (verkey) {
+      config.headers['x-verkey'] = verkey
+    }
+    
     return config
   },
   (error) => {
@@ -32,6 +45,8 @@ apiService.interceptors.response.use(
     // Se receber 401, limpar autenticação
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
+      localStorage.removeItem('did')
+      localStorage.removeItem('verkey')
       // Redirecionar para login se necessário
       window.location.href = '/login'
     }

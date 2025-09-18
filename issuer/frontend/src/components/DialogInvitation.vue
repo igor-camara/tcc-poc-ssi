@@ -29,32 +29,28 @@
       
       <!-- Conteúdo -->
       <div class="px-6 py-4">
-        <div>
+        <div class="pt-4">
           <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-            Nome da Conexão:
+            Nome da conexão:
           </label>
           <input
             v-model="inputText"
             type="text"
-            placeholder="Digite o nome da conexão..."
+            placeholder="Nome da conexão"
+            :disabled="disabled"
             class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-slate-400 transition-colors duration-200"
             @keyup.enter="confirmAction"
             @keyup.escape="handleClose"
           />
         </div>
-        
+
         <div class="pt-4">
           <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
             URL da Conexão:
           </label>
-          <input
-            v-model="connectionUrl"
-            type="url"
-            placeholder="https://exemplo.com"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-slate-400 transition-colors duration-200"
-            @keyup.enter="confirmAction"
-            @keyup.escape="handleClose"
-          />
+          <label class="text-sm font-medium text-gray-700 dark:text-white break-words">
+            {{ connectionUrl || 'Nenhuma URL gerada ainda.' }}
+          </label>
         </div>
       </div>
       
@@ -62,14 +58,14 @@
       <div class="px-6 py-4 bg-gray-50 dark:bg-slate-700/50 rounded-b-2xl flex justify-end gap-x-3">
         <button
           @click="handleClose"
-          class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+          class="px-4 py-2 text-sm font-medium text-gray-700 hover:cursor-pointer dark:text-slate-300 bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
         >
-          Cancelar
+          {{ closeBtnText }}
         </button>
         <button
           @click="confirmAction"
-          :disabled="!inputText.trim() || !connectionUrl.trim()"
-          class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 disabled:cursor-not-allowed"
+          :disabled="!inputText || disabled"
+          class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:cursor-pointer hover:from-blue-600 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 disabled:cursor-not-allowed"
         >
           Adicionar
         </button>
@@ -80,6 +76,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { useInvitationStore } from '@/composables/useInvitationStore'
 
 const props = defineProps({
   isOpen: {
@@ -89,28 +86,45 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close'])
+const invitationStore = useInvitationStore()
 
 const inputText = ref('')
 const connectionUrl = ref('')
+const closeBtnText = ref('Cancelar')
+const disabled = ref(false)
 
 const handleClose = () => {
-  emit('close', inputText.value, connectionUrl.value)
-  inputText.value = ''
-  connectionUrl.value = ''
+  emit('close', inputText.value)
+  resetForm()
 }
 
-const confirmAction = () => {
-  if (!inputText.value.trim() || !connectionUrl.value.trim()) {
-    return
-  }
-    
-  handleClose()
-}
-
-watch(() => props.isOpen, (newValue) => {
+const resetForm = (newValue = '') => {
   if (!newValue) {
     inputText.value = ''
     connectionUrl.value = ''
+    disabled.value = false
+    closeBtnText.value = 'Cancelar'
   }
+}
+
+const confirmAction = async () => {
+  const response = await invitationStore.createInvitation(inputText.value)
+
+  if (response.success) {
+    connectionUrl.value = response.data.invitation_url
+    disabled.value = true
+    closeBtnText.value = 'Fechar'
+    appStore.showSuccess('URL de conexão criada com sucesso!', {
+      title: 'Sucesso'
+    })
+  } else {
+    appStore.showError(response.error || 'Erro ao criar URL de conexão. Tente novamente.', {
+      title: 'Erro ao criar URL de conexão'
+    })
+  }
+}
+
+watch(() => props.isOpen, (newValue) => {
+  resetForm(newValue)
 })
 </script>

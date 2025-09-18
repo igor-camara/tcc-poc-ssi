@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import HTTPException, status, Depends
+from fastapi import HTTPException, status, Depends, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.config import settings
 from app.models.user import User
@@ -77,6 +77,50 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         )
     
     return user
+
+async def get_current_user_with_public_did(
+    authorization: str = Header(None),
+    x_public_did: str = Header(None, alias="X-Public-DID")
+) -> tuple[User, str]:
+    """
+    Get current user along with their public DID from headers
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token de acesso requerido",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    token = authorization.split(" ")[1]
+    payload = verify_access_token(token)
+    
+    if payload is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    user_id = payload.get("sub")
+    user = User.get_by_id(user_id)
+    
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuário não encontrado"
+        )
+    
+    # Use public DID from header or user's stored public DID
+    public_did = x_public_did or getattr(user, 'public_did', None)
+    
+    if not public_did:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Public DID não encontrado para o usuário"
+        )
+    
+    return user, public_did
 
 def authenticate_user(email: str, password: str) -> Optional[User]:
     """Authenticate a user with email and password"""

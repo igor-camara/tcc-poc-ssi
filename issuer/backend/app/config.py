@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./issuer.db"
     
     # CORS
-    cors_origins: List[str] = ["http://localhost:5174", "http://localhost:3001"]
+    cors_origins: List[str] = ["http://localhost:5173", "http://localhost:3001"]
     
     # ACA-Py integration
     acapy_admin_url: str = "http://localhost:8041"
@@ -31,11 +31,12 @@ class Settings(BaseSettings):
     
     # Server
     host: str = "0.0.0.0"
-    port: int = 8001
+    port: int = 7000
     
     class Config:
         env_file = ".env"
         case_sensitive = False
+        extra = "ignore"
 
 # Global settings instance
 settings = Settings()

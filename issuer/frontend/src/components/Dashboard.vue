@@ -25,11 +25,11 @@
             <div class="hidden sm:flex items-center gap-x-3">
               <div class="w-8 h-8 bg-gradient-to-br from-slate-400 to-slate-600 rounded-full flex items-center justify-center">
                 <span class="text-white text-sm font-semibold">
-                  {{ getUserInitials(user?.name) }}
+                  {{ getUserInitials(user?.first_name) }}
                 </span>
               </div>
               <div class="text-sm">
-                <p class="font-medium text-slate-900 dark:text-white">{{ user?.name || 'Usuário' }}</p>
+                <p class="font-medium text-slate-900 dark:text-white">{{ user?.first_name || 'Usuário' }}</p>
                 <p class="text-slate-500 dark:text-slate-400">{{ user?.email || 'email@exemplo.com' }}</p>
               </div>
             </div>
@@ -53,7 +53,7 @@
       <!-- Welcome Section -->
       <div class="mb-8">
         <h2 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-          Bem-vindo de volta, {{ getFirstName(user?.name) }}! 👋
+          Bem-vindo de volta, {{ getFirstName(user?.first_name) }}! 👋
         </h2>
         <p class="text-slate-600 dark:text-slate-300">
           Gerencie suas credenciais digitais e identidade de forma segura
@@ -80,50 +80,99 @@
 
           <!-- Botões em coluna abaixo do texto -->
           <div class="flex gap-x-2 pt-4">
-            <button class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium py-2 px-4 rounded-xl transition-all duration-200" @click="isDialogOpen = true">
-              Adicionar
+            <button class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:cursor-pointer hover:from-blue-600 hover:to-blue-700 text-white font-medium py-2 px-4 rounded-xl transition-all duration-200" @click="handleGenerateUrl">
+              Gerar URL
             </button>
-            <button class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium py-2 px-4 rounded-xl transition-all duration-200">
+            <button class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:cursor-pointer hover:from-blue-600 hover:to-blue-700 text-white font-medium py-2 px-4 rounded-xl transition-all duration-200" @click="handleViewConnections">
+              Exibir
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 border border-white/20 dark:border-slate-700/20 shadow-lg hover:shadow-xl transition-all duration-200">
+          <div class="flex items-center gap-x-2">
+            <div class="flex-shrink-0">
+              <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+              </div>
+            </div>
+            <div class="ml-4 w-full">
+              <p class="text-sm font-medium text-slate-600 dark:text-slate-300">Certificados</p>
+              <p class="text-2xl font-bold text-slate-900 dark:text-white">5</p>
+            </div>
+          </div>
+
+          <!-- Botões em coluna abaixo do texto -->
+          <div class="flex gap-x-2 pt-4">
+            <button class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:cursor-pointer hover:from-blue-600 hover:to-blue-700 text-white font-medium py-2 px-4 rounded-xl transition-all duration-200" @click="handleCreateCredential">
+              Criar certificado
+            </button>
+            <button class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:cursor-pointer hover:from-blue-600 hover:to-blue-700 text-white font-medium py-2 px-4 rounded-xl transition-all duration-200" @click="handleViewCredentials">
               Exibir
             </button>
           </div>
         </div>
       </div>
-      <Dialog :isOpen="isDialogOpen" @close="closeDialog"/>
+      <DialogInvitation :isOpen="isDialogInvitationOpen" @close="closeDialog"/>
+      <DialogCredential :isOpen="isDialogCredentialOpen" @close="closeDialog"/>
     </main>
   </div>
 </template>
 
 <script setup>
 import { useAuth } from '../composables/useAuth'
-import { useInvitation } from '../composables/useInvitation'
+import { useAppStore } from '../composables/useAppStore'
 import { ref } from 'vue'
 import ThemeToggle from './ThemeToggle.vue'
-import Dialog from './Dialog.vue'
+import DialogInvitation from './DialogInvitation.vue'
+import DialogCredential from './DialogCredential.vue'
 
 const { user, logout } = useAuth()
-const { sendInvitation } = useInvitation()
-const isDialogOpen = ref(false);
+const appStore = useAppStore()
+const isDialogInvitationOpen = ref(false);
+const isDialogCredentialOpen = ref(false);
 
-const closeDialog = async (inputText, connectionUrl) => {
-  if (inputText == '' || connectionUrl == '') {
-    isDialogOpen.value = false
-    return
-  }
-
-  const response = await sendInvitation(inputText, connectionUrl)
-
-  if (response.success) {
-    alert('Convite enviado com sucesso!')
-  } else {
-    alert(response.data)
-  }
-  
-  isDialogOpen.value = false
+const closeDialog = () => {
+  isDialogInvitationOpen.value = false
+  isDialogCredentialOpen.value = false
 }
 
 const handleLogout = () => {
   logout()
+}
+
+const handleGenerateUrl = () => {
+  isDialogInvitationOpen.value = true
+  appStore.showInfo('Preparando geração de URL de convite...', {
+    title: 'Processando'
+  })
+}
+
+const handleViewConnections = () => {
+  appStore.showWarning('Funcionalidade em desenvolvimento', {
+    title: 'Em breve',
+    duration: 3000
+  })
+}
+
+const handleCreateCredential = () => {
+  isDialogCredentialOpen.value = true
+  appStore.showInfo('Abrindo formulário de nova credencial...', {
+    title: 'Criando certificado'
+  })
+}
+
+const handleViewCredentials = () => {
+  appStore.setLoading(true)
+  
+  setTimeout(() => {
+    appStore.setLoading(false)
+    appStore.showSuccess('Credenciais carregadas com sucesso!', {
+      title: 'Lista atualizada'
+    })
+  }, 2000)
 }
 
 const getUserInitials = (name) => {

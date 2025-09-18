@@ -20,6 +20,12 @@
         v-else-if="!isInitializing && isAuthenticated"
       />
     </transition>
+    
+    <!-- Global Loading Spinner -->
+    <LoadingSpinner />
+    
+    <!-- Global Alert Container -->
+    <AlertContainer />
   </div>
 </template>
 
@@ -29,6 +35,8 @@ import { useAuth } from './composables/useAuth'
 import { useTheme } from './composables/useTheme'
 import AuthLayout from './components/AuthLayout.vue'
 import Dashboard from './components/Dashboard.vue'
+import LoadingSpinner from './components/LoadingSpinner.vue'
+import AlertContainer from './components/AlertContainer.vue'
 
 // Composables
 const { isAuthenticated, checkAuth } = useAuth()

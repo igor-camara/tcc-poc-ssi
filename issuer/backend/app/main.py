@@ -2,7 +2,7 @@
 SSI (Self-Sovereign Identity) routes for FastAPI
 """
 import asyncio
-from fastapi import APIRouter, HTTPException, status, Depends, Header
+from fastapi import APIRouter, HTTPException, status, Depends
 from app.schemas import (
     CreateInvitationResponse, CreateSchemaRequest, SchemaResponse,
     CreateCredentialDefinitionRequest, CredentialDefinitionResponse,
@@ -54,44 +54,31 @@ async def create_connection_invitation(
 @router.post("/create-credential", response_model=SchemaResponse)
 async def create_credential(
     request: CreateSchemaRequest,
-    current_user: User = Depends(get_current_user),
-    x_public_did: str = Header(None, alias="x-did"),
-    x_public_verkey: str = Header(None, alias="x-verkey")
+    current_user: User = Depends(get_current_user)
 ):
     """
-    Create a credential schema and credential definition using user's public DID
+    Create a credential schema and credential definition
     """
     try:
-        if not x_public_did:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Public DID é obrigatório para criar credential definition"
-            )
-        
-        if not x_public_verkey:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Public Verkey é obrigatório para criar credential definition"
-            )
-            
         ssi_service = get_ssi_service()
         # Create schema
         schema_data = await ssi_service.create_schema(
-            schema_issuer_did=x_public_did,
             schema_name=request.schema_name,
             schema_version=request.schema_version,
             attributes=request.attributes,
             created_by=current_user.id
         )
-
-        # Create credential definition using public DID
+        print(schema_data)
+        # Create credential definition
         cred_def_data = await ssi_service.create_credential_definition(
-            schema_id=schema_data['sent']['schema']["id"],
-            support_revocation=False,
+            schema_id=schema_data["schema_id"],
+            tag="default",
+            support_revocation=False
         )
+        print(cred_def_data)
         
         return SchemaResponse(
-            schema_id=schema_data['sent']['schema']["id"],
+            schema_id=schema_data["schema_id"],
             schema_def=schema_data,
             schema_name=request.schema_name,
             schema_version=request.schema_version,

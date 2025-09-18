@@ -91,15 +91,15 @@
           <!-- Submit Button -->
           <button
             type="submit"
-            :disabled="isLoading"
+            :disabled="appStore.isLoading"
             class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:cursor-pointer hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-400 disabled:to-slate-500 text-white font-semibold py-3 lg:py-4 px-4 lg:px-6 text-base lg:text-lg rounded-xl transition-all duration-200 transform hover:scale-[1.02] disabled:scale-100 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
           >
             <div class="flex items-center justify-center">
-              <svg v-if="isLoading" class="animate-spin -ml-1 mr-3 h-5 w-5 lg:h-6 lg:w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <svg v-if="appStore.isLoading" class="animate-spin -ml-1 mr-3 h-5 w-5 lg:h-6 lg:w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              {{ isLoading ? 'Entrando...' : 'Entrar' }}
+              {{ appStore.isLoading ? 'Entrando...' : 'Entrar' }}
             </div>
           </button>
         </form>
@@ -124,14 +124,13 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useAuth } from '../composables/useAuth'
+import { useAppStore } from '../composables/useAppStore'
 
-// Props e emits
 const emit = defineEmits(['switch-to-register', 'login-success'])
 
-// Composables
-const { login, isLoading, error, clearError } = useAuth()
+const { login, error, clearError } = useAuth()
+const appStore = useAppStore()
 
-// Estado do formulário
 const form = reactive({
   email: '',
   password: ''
@@ -173,7 +172,6 @@ const validateForm = () => {
   return isValid
 }
 
-// Submissão do formulário
 const handleSubmit = async () => {
   clearError()
   
