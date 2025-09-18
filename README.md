@@ -29,21 +29,21 @@ holder, issuer, issuer-verifier -> Agentes que serão usados na demonstração
 
 von-network -> Rede de comunicação (blockchain)
 
-# Como iniciar o projeto (rodar o start.sh já faz tudo isso)
+# Como iniciar e parar o projeto
 
 ```
-./make run-env
+./make run
 ```
-Vai clonar a von-network, arrumar os arquivos e iniciar ela corretamente
-
-```
-docker compose up --build -d
-```
-Vai iniciar os agentes do aca-py
+Vai clonar a von-network, arrumar os arquivos, iniciar a ledger e quando houver confirmação de que ela está online os agentes do ACA-Py serão iniciados
 
 Os agentes do aca-py são um client de APIs usadas para comunicação com a von-network, a interação com a ledger nunca é direta, sempre passa pelas APIs do aca-py primeiro.
 
 Ao iniciar, nas portas 8031, 8041 e 8051 vai haver um swagger com os endpoints dos agentes
+
+```
+./make stop
+```
+Para parar todos os containers
 
 # Frameworks usados
 

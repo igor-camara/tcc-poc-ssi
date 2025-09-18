@@ -39,9 +39,25 @@ services:
         --auto-respond-credential-request
         --auto-store-credential
 
+  # create Public DID for Issuer - Usado para que os usuários da entidade Issuer possam fazer cadastro de schemas na ledger
+
+  ledger-bootstrap-issuer:
+    image: appropriate/curl
+    entrypoint: >
+      sh -c "
+        echo 'Registrando DID na ledger...';
+        curl -X POST http://webserver:8000/register -H 'Content-Type: application/json' -d '{\"seed\":\"000000000000000000000000Issuer01\",\"role\":\"TRUST_ANCHOR\"}';
+        echo 'feito';
+      "
+    networks:
+    - von
+    restart: "no"
+
   # Issuer Agent
   issuer:
     image: bcgovimages/aries-cloudagent:py3.12_1.2.0
+    depends_on:
+      - ledger-bootstrap-issuer
     container_name: ssi-issuer
     ports:
       - "8040:8040"  # Inbound transport
@@ -58,6 +74,8 @@ services:
         --outbound-transport http
         --admin 0.0.0.0 8041
         --admin-insecure-mode
+        --seed 000000000000000000000000Issuer01
+        --public-invites
         --wallet-type askar
         --wallet-name issuer.agent420695
         --wallet-key issuer.agent420695
