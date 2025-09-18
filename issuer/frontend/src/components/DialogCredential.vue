@@ -18,7 +18,7 @@
           </h2>
           <button
             @click="handleClose"
-            class="text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-200 transition-colors duration-200"
+            class="text-gray-400 hover:cursor-pointer hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-200 transition-colors duration-200"
           >
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -124,7 +124,8 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue'
-import { useInvitationStore } from '@/composables/useInvitationStore'
+import { useCredentialStore } from '../composables/useCredentialStore'
+import { useAppStore } from '../composables/useAppStore'
 
 const props = defineProps({
   isOpen: {
@@ -134,7 +135,9 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close'])
-const invitationStore = useInvitationStore()
+
+const credentialStore = useCredentialStore()
+const appStore = useAppStore()
 
 const credentialName = ref('')
 const credentialVersion = ref('')
@@ -174,7 +177,7 @@ const resetForm = () => {
 const confirmAction = async () => {
   if (!isFormValid.value) return
     
-  const response = await invitationStore.createSchema(
+  const response = await credentialStore.createCredential(
     credentialName.value.trim(),
     credentialVersion.value.trim(),
     attributes.value.map(attr => attr.name.trim()).filter(name => name !== '')
@@ -184,8 +187,14 @@ const confirmAction = async () => {
     connectionUrl.value = response.data.invitation_url
     disabled.value = true
     closeBtnText.value = 'Fechar'
+    appStore.showSuccess('Credencial criada com sucesso!', {
+      title: 'Sucesso'
+    })
+    handleClose()
   } else {
-    alert(response.error)
+    appStore.showError(response.error || 'Erro ao criar credencial. Tente novamente.', {
+      title: 'Erro ao criar credencial'
+    })
   }
 }
 

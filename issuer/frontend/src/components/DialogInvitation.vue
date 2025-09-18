@@ -37,6 +37,7 @@
             v-model="inputText"
             type="text"
             placeholder="Nome da conexão"
+            :disabled="disabled"
             class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-slate-400 transition-colors duration-200"
             @keyup.enter="confirmAction"
             @keyup.escape="handleClose"
@@ -94,7 +95,16 @@ const disabled = ref(false)
 
 const handleClose = () => {
   emit('close', inputText.value)
-  inputText.value = ''
+  resetForm()
+}
+
+const resetForm = (newValue = '') => {
+  if (!newValue) {
+    inputText.value = ''
+    connectionUrl.value = ''
+    disabled.value = false
+    closeBtnText.value = 'Cancelar'
+  }
 }
 
 const confirmAction = async () => {
@@ -104,15 +114,17 @@ const confirmAction = async () => {
     connectionUrl.value = response.data.invitation_url
     disabled.value = true
     closeBtnText.value = 'Fechar'
+    appStore.showSuccess('URL de conexão criada com sucesso!', {
+      title: 'Sucesso'
+    })
   } else {
-    alert(response.error)
+    appStore.showError(response.error || 'Erro ao criar URL de conexão. Tente novamente.', {
+      title: 'Erro ao criar URL de conexão'
+    })
   }
 }
 
 watch(() => props.isOpen, (newValue) => {
-  if (!newValue) {
-    inputText.value = ''
-    connectionUrl.value = ''
-  }
+  resetForm(newValue)
 })
 </script>

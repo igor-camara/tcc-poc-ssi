@@ -147,17 +147,17 @@
           </div>
 
           <!-- Submit Button -->
-          <button
+                    <button
             type="submit"
-            :disabled="isLoading"
-            class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:cursor-pointer hover:from-purple-700 hover:to-indigo-700 disabled:from-slate-400 disabled:to-slate-500 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200 transform hover:scale-[1.02] disabled:scale-100 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+            :disabled="appStore.isLoading"
+            class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-400 disabled:to-slate-500 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200 transform hover:scale-[1.02] disabled:scale-100 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
           >
             <div class="flex items-center justify-center">
-              <svg v-if="isLoading" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <svg v-if="appStore.isLoading" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              {{ isLoading ? 'Criando conta...' : 'Criar conta' }}
+              {{ appStore.isLoading ? 'Criando conta...' : 'Criar conta' }}
             </div>
           </button>
         </form>
@@ -182,14 +182,13 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useAuth } from '../composables/useAuth'
+import { useAppStore } from '../composables/useAppStore'
 
-// Props e emits
 const emit = defineEmits(['switch-to-login', 'register-success'])
 
-// Composables
-const { register, isLoading, error, clearError } = useAuth()
+const { register, error, clearError } = useAuth()
+const appStore = useAppStore()
 
-// Estado do formulário
 const form = reactive({
   name: '',
   email: '',
@@ -207,7 +206,6 @@ const errors = reactive({
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 
-// Validação
 const validateForm = () => {
   let isValid = true
   
@@ -255,7 +253,6 @@ const validateForm = () => {
   return isValid
 }
 
-// Submissão do formulário
 const handleSubmit = async () => {
   clearError()
   
@@ -263,11 +260,19 @@ const handleSubmit = async () => {
     return
   }
   
+  const fullName = form.name.trim()
+  const spaceIndex = fullName.indexOf(' ')
+  const firstName = spaceIndex > -1 ? fullName.substring(0, spaceIndex) : fullName
+  const lastName = spaceIndex > -1 ? fullName.substring(spaceIndex + 1) : ''
+  
   const userData = {
-    name: form.name.trim(),
+    first_name: firstName,
+    last_name: lastName,
     email: form.email,
     password: form.password
   }
+
+  console.log(userData)
   
   const result = await register(userData)
   
