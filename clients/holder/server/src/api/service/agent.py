@@ -34,20 +34,20 @@ async def create_did(alias: str = None) -> dict:
     except Exception as e:
         raise Exception(f"Erro ao criar DID: {str(e)}")
 
-async def register_did_on_ledger(did, verkey, alias=None) -> bool:
-    try:
-        result = await get_client().ledger.register_nym(
-            did=did,
-            verkey=verkey,
-            alias=alias,
-            role=None
-        )
-        
-        print(f"Registered DID {did} on ledger")
-        return True
-    except Exception as e:
-        print(f"Failed to register DID on ledger: {str(e)}")
-        return False
+#async def register_did_on_ledger(did, verkey, alias=None) -> bool:
+#    try:
+#        result = await get_client().ledger.register_nym(
+#            did=did,
+#            verkey=verkey,
+#            alias=alias,
+#            role=None
+#        )
+#        
+#        print(f"Registered DID {did} on ledger")
+#        return True
+#    except Exception as e:
+#        print(f"Failed to register DID on ledger: {str(e)}")
+#        return False
 
 async def parse_invitation_url(invitation_url: str) -> dict:
     try:
