@@ -1,8 +1,8 @@
-from api.schemas.response import HealthResponse
+from api.schemas.response import SuccessResponse
 from fastapi import APIRouter
 
 router = APIRouter(prefix="/health", tags=["health"])
 
-@router.get("", response_model=HealthResponse)
-def health_check() -> HealthResponse:
-    return HealthResponse(status=200, message="OK")
+@router.get("", response_model=SuccessResponse)
+def health_check() -> SuccessResponse:
+    return SuccessResponse(data="API em funcionamento")
