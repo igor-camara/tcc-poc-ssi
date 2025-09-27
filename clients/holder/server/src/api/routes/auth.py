@@ -1,95 +1,61 @@
-from api.schemas.request import AuthRegisterRequest, AuthLoginRequest
-from api.schemas.response import AuthResponse
 from api.schemas.headers import AuthHeaders
-from api.service.agent import create_did, register_did_on_ledger
-from api.service.user import create_user, get_user_by_email
-from api.utils.token import create_access_token
-from api.utils.password import verify_password
+from api.schemas.response import ErrorResponse, AuthResponse
+import api.service.auth as auth_service
+from api.schemas.request import AuthRegisterRequest, AuthLoginRequest
 from fastapi.responses import JSONResponse
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, status
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", response_model=AuthResponse)
 async def register_user(credentials: AuthRegisterRequest):
     try:
+        result = await auth_service.register_user(credentials)
 
-        existing_user = get_user_by_email(credentials.email)
-        if existing_user:
-            raise HTTPException(
+        if result == "USER_ALREADY_EXISTS":
+            return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Usuário com este email já existe"
+                content=ErrorResponse(code=result, data="Usuário já existe").model_dump()
             )
-
-        did_info = await create_did(credentials.email)
-
-        is_registered = await register_did_on_ledger(did_info['did'], did_info['verkey'], did_info['alias'])
-
-        if not is_registered:
-            raise HTTPException(
+        if result == "DID_CREATION_FAILED":
+            return JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Falha ao registrar DID na ledger"
+                content=ErrorResponse(code=result, data="Falha na criação do DID").model_dump()
             )
-        
-        user = create_user(
-            name=credentials.full_name,
-            email=credentials.email,
-            password=credentials.password,
-            did=did_info['did'],
-            verkey=did_info['verkey']
-        )
 
-        access_token = create_access_token(data={"sub": user.id})
-
-        response = AuthResponse(
-            user_name=user.first_name,
-            user_surname=user.last_name,
-            user_email=user.email
-        )
-
-        auth_headers = AuthHeaders(
-            token=access_token,
-            did=user.did,
-            verkey=user.verkey
-        )
-
-        return JSONResponse(status_code=201, content=response.model_dump(), headers=auth_headers.model_dump())
+        auth, headers = result
+        return JSONResponse(status_code=201, content=AuthResponse(data=auth).model_dump(), headers=AuthHeaders(**headers).model_dump(by_alias=True))
 
     except Exception as e:
-        raise Exception(
+        return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Erro ao registrar usuário"
-        ) from e
+            content=ErrorResponse(code="INTERNAL_SERVER_ERROR", data=e.args[0] if e.args else "Erro ao registrar usuário").model_dump()
+        )
 
 @router.post("/login", response_model=AuthResponse)
 def login_user(credentials: AuthLoginRequest):
+    try:
+        result = auth_service.login_user(credentials)
 
-    user = get_user_by_email(credentials.email)
+        if result == "USER_NOT_FOUND":
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content=ErrorResponse(code=result, data="Usuário não encontrado").model_dump()
+            )
+        if result == "INVALID_PASSWORD":
+            return JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content=ErrorResponse(code=result, data="Senha inválida").model_dump()
+            )
 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuário não encontrado"
+        auth, headers = result
+        return JSONResponse(status_code=200, content=AuthResponse(data=auth).model_dump(), headers=AuthHeaders(**headers).model_dump(by_alias=True))
+
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(code="INTERNAL_SERVER_ERROR", data=e.args[0] if e.args else "Erro ao autenticar usuário").model_dump()
         )
 
-    if not verify_password(credentials.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Senha incorreta"
-        )
     
-    access_token = create_access_token(data={"sub": user.id})
-
-    response = AuthResponse(
-        user_name=user.first_name,
-        user_surname=user.last_name,
-        user_email=user.email
-    )
-
-    auth_headers = AuthHeaders(
-        token=access_token,
-        did=user.did,
-        verkey=user.verkey
-    )
-
-    return JSONResponse(status_code=200, content=response.model_dump(), headers=auth_headers.model_dump())
