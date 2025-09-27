@@ -250,7 +250,13 @@ commit_changes() {
     local branch_name opt prefix code msg selected
     branch_name=$(git rev-parse --abbrev-ref HEAD)
 
-    if git diff-index --quiet HEAD -- 2>/dev/null && git diff --staged --quiet 2>/dev/null; then
+    # Verificar se há mudanças (modificados, staging ou não rastreados)
+    local has_modified has_staged has_untracked
+    has_modified=$(git diff-index --quiet HEAD -- 2>/dev/null; echo $?)
+    has_staged=$(git diff --staged --quiet 2>/dev/null; echo $?)
+    has_untracked=$(git ls-files --others --exclude-standard | wc -l)
+    
+    if [[ $has_modified -eq 0 && $has_staged -eq 0 && $has_untracked -eq 0 ]]; then
         $GUM style --foreground 196 "✘ Nenhuma mudança para commit." >&2
         return
     fi
