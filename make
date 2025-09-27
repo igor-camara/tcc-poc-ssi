@@ -290,7 +290,21 @@ commit_changes() {
         
         untracked_files=$(git ls-files --others --exclude-standard)
         
-        all_files=$(printf "%s\n%s" "$modified_files" "$untracked_files" | grep -v '^$' | sort -u)
+        # Combinar ambas as listas de forma mais robusta
+        all_files=""
+        if [[ -n "$modified_files" ]]; then
+            all_files="$modified_files"
+        fi
+        if [[ -n "$untracked_files" ]]; then
+            if [[ -n "$all_files" ]]; then
+                all_files="$all_files"$'\n'"$untracked_files"
+            else
+                all_files="$untracked_files"
+            fi
+        fi
+        
+        # Remover linhas vazias e duplicatas
+        all_files=$(echo "$all_files" | grep -v '^$' | sort -u)
 
         if [[ -z "$all_files" ]]; then
             $GUM style --foreground 196 "✘ Nenhum arquivo encontrado para adicionar." >&2
