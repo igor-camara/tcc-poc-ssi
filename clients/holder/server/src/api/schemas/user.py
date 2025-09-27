@@ -3,6 +3,7 @@ import sqlite3
 import os
 from datetime import datetime
 from passlib.context import CryptContext
+from api import settings
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -30,7 +31,7 @@ class User:
     @staticmethod
     def _get_db_connection():
         """Get database connection"""
-        db_path = os.environ.get('DATABASE_URL', 'sqlite:///holder.db').replace('sqlite:///', '')
+        db_path = settings.database_url.replace('sqlite:///', '')
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
         return conn
