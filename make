@@ -125,15 +125,149 @@ create_branch() {
     $GUM style --foreground 46 "✔ Branch $branch_name criada a partir da branch $base_branch" >&2
 }
 
+select_files_paginated() {
+    local files="$1"
+    local all_files=()
+    local remaining_files=()
+    local selected_files=()
+    local current_page=0
+    local page_size=6
+    
+    while IFS= read -r file; do
+        [[ -n "$file" ]] && all_files+=("$file")
+    done <<< "$files"
+    
+    remaining_files=("${all_files[@]}")
+    local total_files=${#all_files[@]}
+    
+    while [[ ${#remaining_files[@]} -gt 0 ]]; do
+        local total_remaining=${#remaining_files[@]}
+        local display_files=()
+        
+        # Calcular páginas
+        local total_pages=$(( (total_remaining + page_size - 1) / page_size ))
+        local start_idx=$((current_page * page_size))
+        local end_idx=$(( start_idx + page_size - 1 ))
+        [[ $end_idx -ge $total_remaining ]] && end_idx=$((total_remaining - 1))
+        
+        # Pegar arquivos da página atual
+        for ((i=start_idx; i<=end_idx && i<total_remaining; i++)); do
+            local file="${remaining_files[$i]}"
+            # Adicionar indicador se é modificado ou novo
+            if git ls-files --error-unmatch "$file" >/dev/null 2>&1; then
+                display_files+=("* $file (modificado)")
+            else
+                display_files+=("+ $file (novo)")
+            fi
+        done
+        
+        # Adicionar opções de navegação
+        local options=("${display_files[@]}")
+        [[ $current_page -gt 0 ]] && options+=("< Página Anterior")
+        [[ $current_page -lt $((total_pages - 1)) ]] && options+=("Próxima Página >")
+        [[ ${#selected_files[@]} -gt 0 ]] && options+=("= Ver Selecionados (${#selected_files[@]})")
+        options+=("- Finalizar Seleção")
+        options+=("x Cancelar")
+        
+        local header="Página $((current_page + 1))/$total_pages - Selecione arquivos"
+        [[ ${#selected_files[@]} -gt 0 ]] && header="$header | ${#selected_files[@]} selecionados"
+        
+        local choices
+        choices=$(printf '%s\n' "${options[@]}" | $GUM choose --no-limit --header "$header")
+        
+        [[ -z "$choices" ]] && continue
+        
+        local should_continue=true
+        
+        while IFS= read -r choice; do
+            case "$choice" in
+                "< Página Anterior")
+                    ((current_page--))
+                    break
+                    ;;
+                "Próxima Página >")
+                    ((current_page++))
+                    break
+                    ;;
+                "= Ver Selecionados"*)
+                    $GUM style --foreground 46 "Arquivos já selecionados:" >&2
+                    for selected in "${selected_files[@]}"; do
+                        $GUM style --foreground 46 "  - $selected" >&2
+                    done
+                    $GUM style --foreground 33 "Pressione ENTER para continuar..." >&2
+                    read -r
+                    break
+                    ;;
+                "- Finalizar Seleção")
+                    should_continue=false
+                    break
+                    ;;
+                "x Cancelar")
+                    selected_files=()
+                    should_continue=false
+                    break
+                    ;;
+                *)
+                    # Remover indicadores para obter o nome real do arquivo
+                    local real_file
+                    real_file=$(echo "$choice" | sed 's/^[*+] //' | sed 's/ (modificado)$//' | sed 's/ (novo)$//')
+                    
+                    # Arquivo selecionado - adicionar à lista e remover dos restantes
+                    selected_files+=("$real_file")
+                    $GUM style --foreground 46 "+ $real_file adicionado" >&2
+                    
+                    # Remover o arquivo da lista de restantes
+                    local temp_remaining=()
+                    for file in "${remaining_files[@]}"; do
+                        [[ "$file" != "$real_file" ]] && temp_remaining+=("$file")
+                    done
+                    remaining_files=("${temp_remaining[@]}")
+                    
+                    # Recalcular página se necessário
+                    local new_total=${#remaining_files[@]}
+                    local new_max_pages=$(( (new_total + page_size - 1) / page_size ))
+                    [[ $current_page -ge $new_max_pages && $new_max_pages -gt 0 ]] && current_page=$((new_max_pages - 1))
+                    [[ $new_total -eq 0 ]] && current_page=0
+                    
+                    # Adicionar o arquivo imediatamente ao git
+                    git add "$real_file"
+                    ;;
+            esac
+        done <<< "$choices"
+        
+        [[ "$should_continue" == false ]] && break
+    done
+    
+    # Retornar arquivos selecionados (apenas para compatibilidade)
+    for file in "${selected_files[@]}"; do
+        echo "$file"
+    done
+}
+
 commit_changes() {
     validate_git_repo
 
     local branch_name opt prefix code msg selected
     branch_name=$(git rev-parse --abbrev-ref HEAD)
 
-    if git diff-index --quiet HEAD -- 2>/dev/null; then
+    if git diff-index --quiet HEAD -- 2>/dev/null && git diff --staged --quiet 2>/dev/null; then
         $GUM style --foreground 196 "✘ Nenhuma mudança para commit." >&2
         return
+    fi
+
+    local staged_files
+    staged_files=$(git diff --staged --name-only)
+    
+    if [[ -n "$staged_files" ]]; then
+        $GUM style --foreground 33 "⚠ Há arquivos já no staging area:" >&2
+        echo "$staged_files" | while read -r file; do
+            $GUM style --foreground 33 "  • $file" >&2
+        done
+        
+        if $GUM confirm "Deseja remover estes arquivos do staging e selecionar manualmente?"; then
+            git reset HEAD .
+            $GUM style --foreground 46 "✔ Staging area limpo!" >&2
+        fi
     fi
 
     opt=$(choose_type "alteração")
@@ -147,25 +281,46 @@ commit_changes() {
         return
     fi
 
-    if $GUM confirm "Deseja adicionar todos os arquivos?"; then
+    if $GUM confirm "Deseja adicionar todos os arquivos (modificados e novos)?"; then
         git add .
     else
-        local files
-        files=$(git status --porcelain | awk '{print $2}')
+        local files modified_files untracked_files all_files
+        
+        modified_files=$(git diff --name-only)
+        
+        untracked_files=$(git ls-files --others --exclude-standard)
+        
+        all_files=$(printf "%s\n%s" "$modified_files" "$untracked_files" | grep -v '^$' | sort -u)
 
-        if [[ -z "$files" ]]; then
-            $GUM style --foreground 196 "✘ Nenhum arquivo alterado para adicionar." >&2
+        if [[ -z "$all_files" ]]; then
+            $GUM style --foreground 196 "✘ Nenhum arquivo encontrado para adicionar." >&2
             return
         fi
 
-        selected=$($GUM choose --no-limit --header "Selecione os arquivos para adicionar (Aperte ESPAÇO para selecionar o arquivo):" $files)
+        git reset HEAD . 2>/dev/null || true
 
-        if [[ -n "$selected" ]]; then
-            git add $selected
-        else
-            $GUM style --foreground 196 "✘ Nenhum arquivo selecionado." >&2
+        selected=$(select_files_paginated "$all_files")
+        
+        local staged_count
+        staged_count=$(git diff --staged --name-only | wc -l)
+        
+        if [[ $staged_count -eq 0 ]]; then
+            $GUM style --foreground 196 "✘ Nenhum arquivo foi selecionado." >&2
             return
         fi
+    fi
+
+    local files_to_commit
+    files_to_commit=$(git diff --staged --name-only)
+    
+    if [[ -n "$files_to_commit" ]]; then
+        $GUM style --foreground 46 "✔ Arquivos que serão commitados:" >&2
+        echo "$files_to_commit" | while read -r file; do
+            $GUM style --foreground 46 "  • $file" >&2
+        done
+    else
+        $GUM style --foreground 196 "✘ Nenhum arquivo no staging area para commit." >&2
+        return
     fi
 
     msg=$($GUM input --placeholder "Digite a mensagem do commit")
