@@ -1,6 +1,5 @@
 from typing import Optional, TypeVar, Generic
 from pydantic import BaseModel, Field
-from api.schemas.auth import AuthUser
 
 # TypeVar para permitir genéricos
 T = TypeVar('T')
@@ -23,6 +22,3 @@ class ErrorResponse(BaseResponse[str | dict]):
     code: str = Field(..., description="Código de erro")
     data: str | dict = Field(..., description="Mensagem de erro")
 
-
-class AuthResponse(SuccessResponse[AuthUser]):
-    data: AuthUser

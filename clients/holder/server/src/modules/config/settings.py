@@ -19,7 +19,7 @@ class Settings:
         self.jwt_algorithm = os.getenv("JWT_ALGORITHM", "HS256")
         self.access_token_expire_minutes = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 
-        BASE_DIR = Path(__file__).resolve().parents[5]
+        BASE_DIR = Path(__file__).resolve().parents[6]
         DB_PATH = BASE_DIR / "db" / "holder.db"
         
         self.database_url = os.getenv("DATABASE_URL", f"sqlite:///{DB_PATH}")

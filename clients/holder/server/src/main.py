@@ -1,6 +1,6 @@
 import uvicorn
-from api import settings
-from api.routes import app
+from modules.config.settings import settings
+from modules import app
 
 if __name__ == "__main__":
     uvicorn.run(

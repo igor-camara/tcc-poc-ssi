@@ -270,3 +270,13 @@ Desenvolvido como parte do Trabalho de Conclusão de Curso (TCC) em Ciência da 
 ⭐ **Se este projeto foi útil, considere dar uma estrela no repositório!**
 
 🔗 **Links Rápidos**: [Documentação](README.md) | [Issues](issues) | [Discussions](discussions)
+
+
+
+## A Fazer
+
+migrar escopo de recebimento de URL
+
+migrar escopo do issuer
+
+iniciar escopo do issuer-verifier

@@ -1,8 +1,8 @@
-import api.service.user as user_service
-import api.service.agent as agent_service
-from api.schemas.request import AuthRegisterRequest, AuthLoginRequest
-from api.utils.token import create_access_token
-from api.utils.password import verify_password
+import modules.user.service as user_service
+import modules.invitation.service as agent_service
+from modules.auth.schema import AuthRegisterRequest, AuthLoginRequest
+from modules.utils.token import create_access_token
+from modules.utils.password import verify_password
 
 async def register_user(credentials: AuthRegisterRequest) -> tuple[dict, dict] | str:
     existing_user = user_service.get_user_by_email(credentials.email)

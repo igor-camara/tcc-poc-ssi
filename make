@@ -564,6 +564,467 @@ run_container() {
     exit 0
 }
 
+check_dev_dependencies() {
+    local missing_deps=()
+    local warnings=()
+
+    # Verificar Python
+    if ! command -v python3 > /dev/null 2>&1; then
+        missing_deps+=("python3")
+    fi
+
+    # Verificar Poetry
+    if ! command -v poetry > /dev/null 2>&1; then
+        missing_deps+=("poetry")
+    fi
+
+    # Verificar Node.js - com suporte a NVM
+    local node_available=false
+    if command -v node > /dev/null 2>&1; then
+        node_available=true
+    elif [ -f "$HOME/.nvm/nvm.sh" ] || [ -f "/usr/share/nvm/init-nvm.sh" ]; then
+        warnings+=("NVM encontrado - Node.js será carregado automaticamente")
+        node_available=true
+    fi
+    
+    if [ "$node_available" = false ]; then
+        missing_deps+=("node.js")
+    fi
+
+    # Verificar pnpm
+    if ! command -v pnpm > /dev/null 2>&1; then
+        missing_deps+=("pnpm")
+    fi
+
+    # Mostrar avisos se houver
+    if [ ${#warnings[@]} -gt 0 ]; then
+        for warning in "${warnings[@]}"; do
+            $GUM style --foreground 33 "⚠ $warning" >&2
+        done
+    fi
+
+    if [ ${#missing_deps[@]} -gt 0 ]; then
+        $GUM style --foreground 196 "✘ Dependências ausentes:" >&2
+        for dep in "${missing_deps[@]}"; do
+            $GUM style --foreground 196 "  • $dep" >&2
+        done
+        $GUM style --foreground 33 "" >&2
+        $GUM style --foreground 33 "Instalação sugerida:" >&2
+        $GUM style --foreground 33 "  sudo apt install python3 python3-pip nodejs npm" >&2
+        $GUM style --foreground 33 "  curl -sSL https://install.python-poetry.org | python3 -" >&2
+        $GUM style --foreground 33 "  npm install -g pnpm" >&2
+        $GUM style --foreground 33 "" >&2
+        $GUM style --foreground 33 "Ou instale NVM para gerenciar versões do Node.js:" >&2
+        $GUM style --foreground 33 "  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash" >&2
+        return 1
+    fi
+
+    return 0
+}
+
+setup_backend() {
+    local context="$1"  # holder, issuer, issuer-verifier
+    local port="$2"
+
+    if [ ! -d "clients/$context/server" ]; then
+        $GUM style --foreground 196 "✘ Diretório clients/$context/server não encontrado!" >&2
+        return 1
+    fi
+
+    source venv/bin/activate 2>/dev/null || true
+    cd "clients/$context/server" || return 1
+
+    # Instalar dependências se necessário
+    if [ ! -f "poetry.lock" ] || [ "pyproject.toml" -nt "poetry.lock" ]; then
+        if ! $GUM spin --spinner "points" --title "Instalando dependências Python ($context)..." -- \
+            poetry install; then
+            $GUM style --foreground 196 "✘ Erro ao instalar dependências Python para $context" >&2
+            cd - > /dev/null
+            return 1
+        fi
+    fi
+
+    # Configurar porta se especificada
+    if [ -n "$port" ] && [ -f "src/api/__init__.py" ]; then
+        if [ -f ".env" ]; then
+            sed -i "s/^PORT=.*/PORT=$port/" .env 2>/dev/null || true
+        else
+            echo "PORT=$port" > .env
+        fi
+    fi
+
+    cd - > /dev/null
+    return 0
+}
+
+setup_frontend() {
+    local context="$1"  # holder, issuer, issuer-verifier
+
+    if [ ! -d "clients/$context/painel" ]; then
+        $GUM style --foreground 196 "✘ Diretório clients/$context/painel não encontrado!" >&2
+        return 1
+    fi
+
+    # Carregar NVM se disponível
+    if [ -f "$HOME/.nvm/nvm.sh" ]; then
+        source "$HOME/.nvm/nvm.sh"
+        nvm use 20 2>/dev/null || nvm use node 2>/dev/null || $GUM style --foreground 33 "⚠ NVM disponível, mas versão 20 não encontrada" >&2
+    elif [ -f "/usr/share/nvm/init-nvm.sh" ]; then
+        source "/usr/share/nvm/init-nvm.sh"
+        nvm use 20 2>/dev/null || nvm use node 2>/dev/null || $GUM style --foreground 33 "⚠ NVM disponível, mas versão 20 não encontrada" >&2
+    else
+        $GUM style --foreground 33 "⚠ NVM não encontrado, usando Node.js do sistema" >&2
+    fi
+    
+    cd "clients/$context/painel" || return 1
+
+    # Instalar dependências se necessário
+    if [ ! -d "node_modules" ] || [ "package.json" -nt "node_modules" ]; then
+        $GUM style --foreground 33 "📦 Preparando instalação de dependências..." >&2
+        
+        # Limpar cache do pnpm se necessário
+        if [ -d "node_modules" ]; then
+            $GUM style --foreground 33 "🧹 Limpando instalação anterior..." >&2
+            rm -rf node_modules package-lock.json pnpm-lock.yaml 2>/dev/null || true
+        fi
+        
+        # Instalar com opções não-interativas
+        if ! $GUM spin --spinner "points" --title "Instalando dependências Node.js ($context)..." -- \
+            bash -c "echo 'y' | pnpm install --prefer-offline --no-frozen-lockfile --ignore-scripts"; then
+            
+            $GUM style --foreground 33 "⚠ Tentativa 1 falhou, tentando com limpeza de cache..." >&2
+            
+            # Segunda tentativa com limpeza completa
+            pnpm store prune 2>/dev/null || true
+            if ! $GUM spin --spinner "points" --title "Reinstalando dependências..." -- \
+                bash -c "echo 'y' | pnpm install --force --no-frozen-lockfile"; then
+                $GUM style --foreground 196 "✘ Erro ao instalar dependências Node.js para $context" >&2
+                cd - > /dev/null
+                return 1
+            fi
+        fi
+    fi
+
+    cd - > /dev/null
+    return 0
+}
+
+start_backend() {
+    local context="$1"  # holder, issuer, issuer-verifier
+    local port="$2"
+
+    cd "clients/$context/server" || return 1
+
+    $GUM style --foreground 46 "🚀 Iniciando backend $context na porta $port..." >&2
+    
+    # Executar em background
+    poetry run python src/main.py > "/tmp/ssi-${context}-backend.log" 2>&1 &
+    local backend_pid=$!
+    echo $backend_pid > "/tmp/ssi-${context}-backend.pid"
+
+    # Verificar se iniciou corretamente
+    sleep 3
+    if kill -0 "$backend_pid" 2>/dev/null; then
+        $GUM style --foreground 46 "✔ Backend $context iniciado (PID: $backend_pid)" >&2
+        $GUM style --foreground 33 "  📊 API: http://localhost:$port" >&2
+        $GUM style --foreground 33 "  📋 Logs: /tmp/ssi-${context}-backend.log" >&2
+        cd - > /dev/null
+        return 0
+    else
+        $GUM style --foreground 196 "✘ Falha ao iniciar backend $context" >&2
+        cd - > /dev/null
+        return 1
+    fi
+}
+
+start_frontend() {
+    local context="$1"  # holder, issuer, issuer-verifier
+    local port="$2"
+
+    # Carregar NVM se disponível
+    if [ -f "$HOME/.nvm/nvm.sh" ]; then
+        source "$HOME/.nvm/nvm.sh"
+    elif [ -f "/usr/share/nvm/init-nvm.sh" ]; then
+        source "/usr/share/nvm/init-nvm.sh"
+    fi
+
+    cd "clients/$context/painel" || return 1
+
+    $GUM style --foreground 46 "🎨 Iniciando frontend $context na porta $port..." >&2
+    
+    # Executar em background com NVM carregado
+    bash -c "
+        if [ -f '$HOME/.nvm/nvm.sh' ]; then
+            source '$HOME/.nvm/nvm.sh'
+            nvm use 20 2>/dev/null || nvm use node 2>/dev/null || true
+        elif [ -f '/usr/share/nvm/init-nvm.sh' ]; then
+            source '/usr/share/nvm/init-nvm.sh'
+            nvm use 20 2>/dev/null || nvm use node 2>/dev/null || true
+        fi
+        pnpm dev --port '$port' --host 0.0.0.0
+    " > "/tmp/ssi-${context}-frontend.log" 2>&1 &
+    
+    local frontend_pid=$!
+    echo $frontend_pid > "/tmp/ssi-${context}-frontend.pid"
+
+    # Verificar se iniciou corretamente
+    sleep 5
+    if kill -0 "$frontend_pid" 2>/dev/null; then
+        $GUM style --foreground 46 "✔ Frontend $context iniciado (PID: $frontend_pid)" >&2
+        $GUM style --foreground 33 "  🌐 Web: http://localhost:$port" >&2
+        $GUM style --foreground 33 "  📋 Logs: /tmp/ssi-${context}-frontend.log" >&2
+        cd - > /dev/null
+        return 0
+    else
+        $GUM style --foreground 196 "✘ Falha ao iniciar frontend $context" >&2
+        $GUM style --foreground 33 "  📋 Verifique os logs em: /tmp/ssi-${context}-frontend.log" >&2
+        cd - > /dev/null
+        return 1
+    fi
+}
+
+stop_dev_services() {
+    local stopped_count=0
+
+    $GUM style --foreground 33 "🛑 Parando serviços de desenvolvimento..." >&2
+
+    # Parar todos os serviços conhecidos
+    for context in "holder" "issuer" "issuer-verifier"; do
+        for service in "backend" "frontend"; do
+            local pid_file="/tmp/ssi-${context}-${service}.pid"
+            if [ -f "$pid_file" ]; then
+                local pid
+                pid=$(cat "$pid_file")
+                if kill -0 "$pid" 2>/dev/null; then
+                    kill "$pid" 2>/dev/null
+                    $GUM style --foreground 46 "✔ $context $service parado (PID: $pid)" >&2
+                    stopped_count=$((stopped_count + 1))
+                fi
+                rm -f "$pid_file"
+            fi
+        done
+    done
+
+    # Limpar arquivos de log antigos
+    rm -f /tmp/ssi-*-backend.log /tmp/ssi-*-frontend.log 2>/dev/null || true
+
+    if [ $stopped_count -eq 0 ]; then
+        $GUM style --foreground 33 "⚠ Nenhum serviço em execução foi encontrado" >&2
+    else
+        $GUM style --foreground 46 "✔ $stopped_count serviço(s) parado(s) com sucesso!" >&2
+    fi
+}
+
+show_dev_status() {
+    $GUM style --foreground 46 "📊 Status dos Serviços de Desenvolvimento" >&2
+    $GUM style --foreground 46 "" >&2
+
+    local running_services=0
+
+    for context in "holder" "issuer" "issuer-verifier"; do
+        local context_has_services=false
+        
+        for service in "backend" "frontend"; do
+            local pid_file="/tmp/ssi-${context}-${service}.pid"
+            if [ -f "$pid_file" ]; then
+                local pid
+                pid=$(cat "$pid_file")
+                if kill -0 "$pid" 2>/dev/null; then
+                    if [ "$context_has_services" = false ]; then
+                        $GUM style --foreground 33 "📁 $context:" >&2
+                        context_has_services=true
+                    fi
+                    local port="unknown"
+                    case "$context-$service" in
+                        "holder-backend") port="8000" ;;
+                        "holder-frontend") port="5173" ;;
+                        "issuer-backend") port="8001" ;;
+                        "issuer-frontend") port="5174" ;;
+                        "issuer-verifier-backend") port="8002" ;;
+                        "issuer-verifier-frontend") port="5175" ;;
+                    esac
+                    $GUM style --foreground 46 "  ✔ $service rodando (PID: $pid, porta: $port)" >&2
+                    running_services=$((running_services + 1))
+                fi
+            fi
+        done
+    done
+
+    if [ $running_services -eq 0 ]; then
+        $GUM style --foreground 33 "⚠ Nenhum serviço em execução" >&2
+    fi
+
+    $GUM style --foreground 46 "" >&2
+}
+
+dev_menu() {
+    local action
+    action=$($GUM choose "start" "stop" "status" "help" "voltar" --header "Desenvolvimento Local - O que deseja fazer?")
+    case $action in
+        "start")   dev_start ;;
+        "stop")    stop_dev_services ;;
+        "status")  show_dev_status ;;
+        "help")    show_help_dev ;;
+        "voltar")  return ;;
+    esac
+}
+
+dev_start() {
+    if ! check_dev_dependencies; then
+        return 1
+    fi
+
+    # Verificar se há serviços já rodando
+    local running_services=0
+    for context in "holder" "issuer" "issuer-verifier"; do
+        for service in "backend" "frontend"; do
+            local pid_file="/tmp/ssi-${context}-${service}.pid"
+            if [ -f "$pid_file" ]; then
+                local pid
+                pid=$(cat "$pid_file")
+                if kill -0 "$pid" 2>/dev/null; then
+                    running_services=$((running_services + 1))
+                fi
+            fi
+        done
+    done
+
+    if [ $running_services -gt 0 ]; then
+        if $GUM confirm "Há $running_services serviço(s) já em execução. Deseja parar todos e reiniciar?"; then
+            stop_dev_services
+            sleep 2
+        else
+            return 0
+        fi
+    fi
+
+    # Verificar quais contextos estão disponíveis
+    local available_contexts=()
+    if [ -d "clients/holder" ]; then
+        available_contexts+=("holder")
+    fi
+    if [ -d "clients/issuer" ]; then
+        available_contexts+=("issuer")
+    fi
+    if [ -d "clients/issuer-verifier" ]; then
+        available_contexts+=("issuer-verifier")
+    fi
+
+    if [ ${#available_contexts[@]} -eq 0 ]; then
+        $GUM style --foreground 196 "✘ Nenhum contexto de aplicação encontrado em clients/" >&2
+        return 1
+    fi
+
+    # Escolher contexto para executar
+    local selected_context
+    if [ ${#available_contexts[@]} -eq 1 ]; then
+        selected_context="${available_contexts[0]}"
+        $GUM style --foreground 33 "📁 Usando contexto disponível: $selected_context" >&2
+    else
+        selected_context=$($GUM choose "${available_contexts[@]}" --header "Escolha o contexto para executar:")
+        if [ -z "$selected_context" ]; then
+            $GUM style --foreground 196 "✘ Nenhum contexto selecionado." >&2
+            return 1
+        fi
+    fi
+
+    # Escolher o que executar
+    local services_to_run
+    services_to_run=$($GUM choose --no-limit "backend" "frontend" --header "O que deseja executar para $selected_context?")
+    
+    if [ -z "$services_to_run" ]; then
+        $GUM style --foreground 196 "✘ Nenhum serviço selecionado." >&2
+        return 1
+    fi
+
+    $GUM style --foreground 33 "⚙️ Configurando ambiente de desenvolvimento..." >&2
+
+    # Definir portas por contexto
+    local backend_port frontend_port
+    case "$selected_context" in
+        "holder")
+            backend_port="8000"
+            frontend_port="5173"
+            ;;
+        "issuer")
+            backend_port="8001"
+            frontend_port="5174"
+            ;;
+        "issuer-verifier")
+            backend_port="8002"
+            frontend_port="5175"
+            ;;
+    esac
+
+    local started_services=()
+
+    # Executar backend se solicitado
+    if echo "$services_to_run" | grep -q "backend"; then
+        if setup_backend "$selected_context" "$backend_port"; then
+            if start_backend "$selected_context" "$backend_port"; then
+                started_services+=("backend")
+            fi
+        fi
+    fi
+
+    # Executar frontend se solicitado
+    if echo "$services_to_run" | grep -q "frontend"; then
+        if setup_frontend "$selected_context"; then
+            if start_frontend "$selected_context" "$frontend_port"; then
+                started_services+=("frontend")
+            fi
+        fi
+    fi
+
+    if [ ${#started_services[@]} -gt 0 ]; then
+        $GUM style --foreground 46 "" >&2
+        $GUM style --foreground 46 "✔ Ambiente de desenvolvimento configurado!" >&2
+        $GUM style --foreground 46 "" >&2
+        $GUM style --foreground 33 "📋 Serviços iniciados para $selected_context:" >&2
+        
+        for service in "${started_services[@]}"; do
+            case "$service" in
+                "backend")
+                    $GUM style --foreground 33 "  🔧 Backend: http://localhost:$backend_port" >&2
+                    $GUM style --foreground 33 "  📖 API Docs: http://localhost:$backend_port/docs" >&2
+                    ;;
+                "frontend")
+                    $GUM style --foreground 33 "  🎨 Frontend: http://localhost:$frontend_port" >&2
+                    ;;
+            esac
+        done
+        
+        $GUM style --foreground 46 "" >&2
+        $GUM style --foreground 33 "💡 Para parar os serviços: ./make -> dev -> stop" >&2
+        $GUM style --foreground 33 "📊 Para ver status: ./make -> dev -> status" >&2
+    else
+        $GUM style --foreground 196 "✘ Nenhum serviço foi iniciado com sucesso" >&2
+    fi
+}
+
+show_help_dev() {
+    $GUM style --foreground 46 "" >&2
+    $GUM style --foreground 46 "Uso: Desenvolvimento Local" >&2
+    $GUM style --foreground 46 "" >&2
+    $GUM style --foreground 33 "Comandos disponíveis:" >&2
+    $GUM style --foreground 33 "  start        - Iniciar backend e/ou frontend localmente" >&2
+    $GUM style --foreground 33 "  stop         - Parar todos os serviços de desenvolvimento" >&2
+    $GUM style --foreground 33 "  status       - Mostrar status dos serviços em execução" >&2
+    $GUM style --foreground 33 "  help         - Mostrar esta ajuda" >&2
+    $GUM style --foreground 46 "" >&2
+    $GUM style --foreground 33 "Funcionalidades:" >&2
+    $GUM style --foreground 33 "  • Instalação automática de dependências" >&2
+    $GUM style --foreground 33 "  • Execução em background com logs" >&2
+    $GUM style --foreground 33 "  • Configuração automática de portas" >&2
+    $GUM style --foreground 33 "  • Suporte para múltiplos contextos (holder, issuer, issuer-verifier)" >&2
+    $GUM style --foreground 46 "" >&2
+    $GUM style --foreground 33 "Portas padrão:" >&2
+    $GUM style --foreground 33 "  • Holder Backend: 8000, Frontend: 5173" >&2
+    $GUM style --foreground 33 "  • Issuer Backend: 8001, Frontend: 5174" >&2
+    $GUM style --foreground 33 "  • Issuer-Verifier Backend: 8002, Frontend: 5175" >&2
+    $GUM style --foreground 46 "" >&2
+}
+
 stop_container() {
     local containers_stopped=0
 
@@ -710,6 +1171,7 @@ show_help() {
     $GUM style --foreground 33 "Módulos disponíveis:" >&2
     $GUM style --foreground 33 "  git          - Operações git (branch, commit, push, deploy)" >&2
     $GUM style --foreground 33 "  container    - Gerenciamento de containers SSI" >&2
+    $GUM style --foreground 33 "  dev          - Desenvolvimento local (backend e frontend)" >&2
     $GUM style --foreground 33 "  alias        - Instalar alias 'stw' (steward) para rodar este script de qualquer lugar" >&2
     $GUM style --foreground 33 "  help         - Mostrar esta ajuda" >&2
     $GUM style --foreground 46 "" >&2
@@ -725,10 +1187,11 @@ main() {
 
     while true; do
         local action
-        action=$($GUM choose "git" "container" "alias" "help" "sair" --header "O que deseja fazer?")
+        action=$($GUM choose "git" "container" "dev" "alias" "help" "sair" --header "O que deseja fazer?")
         case $action in
             "git")       git_menu ;;
             "container") container ;;
+            "dev")       dev_menu ;;
             "alias")     install_alias ;;
             "help")      show_help ;;
             "sair")      break ;;

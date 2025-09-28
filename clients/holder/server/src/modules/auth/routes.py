@@ -1,7 +1,7 @@
-from api.schemas.headers import AuthHeaders
-from api.schemas.response import ErrorResponse, AuthResponse
-import api.service.auth as auth_service
-from api.schemas.request import AuthRegisterRequest, AuthLoginRequest
+from modules.utils.headers import AuthHeaders
+import modules.auth.service as auth_service
+from modules.utils.model import ErrorResponse
+from modules.auth.schema import AuthRegisterRequest, AuthLoginRequest, AuthResponse
 from fastapi.responses import JSONResponse
 from fastapi import APIRouter, status
 

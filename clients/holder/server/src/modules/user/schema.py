@@ -3,7 +3,7 @@ import sqlite3
 import os
 from datetime import datetime
 from passlib.context import CryptContext
-from api import settings
+from modules.config.settings import settings
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
