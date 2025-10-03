@@ -1,8 +1,16 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from modules.utils.model import SuccessResponse, ErrorResponse
-from modules.credential.schema import CreateCredentialRequest
-from modules.credential.service import create_schema, create_credential_definition, list_ledger_credentials, get_credential_by_id
+from modules.credential.schema import CreateCredentialRequest, CredentialOfferRequest
+from modules.credential.service import (
+    create_schema, 
+    create_credential_definition, 
+    list_ledger_credentials, 
+    get_credential_by_id,
+    get_credential_definition_by_id,
+    send_credential_offer,
+    get_connection_by_id
+)
 
 router = APIRouter(prefix="/credential", tags=["credential"])
 
@@ -46,10 +54,43 @@ async def get_credential(credential: dict):
 
     return JSONResponse(status_code=200, content=SuccessResponse(data=credential).model_dump())
 
-@router.post("/offer")
-async def offer_credential():
-    return JSONResponse(status_code=200, content=SuccessResponse(data="Credential offer successful").model_dump())
+@router.post("/offer", response_model=SuccessResponse)
+async def offer_credential(offer_request: CredentialOfferRequest):
+    connection = await get_connection_by_id(offer_request.connection_id)
 
-@router.post("/issue")
-async def issue_credential():
-    return JSONResponse(status_code=200, content=SuccessResponse(data="Credential issuance successful").model_dump())
+    if not connection:
+        return JSONResponse(
+            status_code=404,
+            content=ErrorResponse(code="connection_not_found", data="Connection not found").model_dump()
+        )
+
+    cred_def = await get_credential_definition_by_id(offer_request.cred_def_id)
+
+    if not cred_def:
+        return JSONResponse(
+            status_code=404,
+            content=ErrorResponse(code="cred_def_not_found", data="Credential definition not found").model_dump()
+        )
+
+    offer_result = await send_credential_offer(
+        connection_id=offer_request.connection_id,
+        cred_def_id=offer_request.cred_def_id,
+        attributes=offer_request.attributes,
+        comment=offer_request.comment
+    )
+
+    if isinstance(offer_result, str):
+        return JSONResponse(
+            status_code=500,
+            content=ErrorResponse(code=offer_result, data="Failed to send credential offer").model_dump()
+        )
+
+    return JSONResponse(
+        status_code=200,
+        content=SuccessResponse(data=offer_result).model_dump()
+    )    
+
+# Teoricamente não precisa porque ela já está sendo enviada automaticamente pelo acapy --auto-respond-credential-offer --auto-respond-credential-request
+#@router.post("/issue")
+#async def issue_credential():
+#    return JSONResponse(status_code=200, content=SuccessResponse(data="Credential issuance successful").model_dump())
