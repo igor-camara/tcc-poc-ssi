@@ -1,0 +1,367 @@
+type: collection.insomnia.rest/5.0
+name: Scratch Pad
+meta:
+  id: wrk_scratchpad
+  created: 1756057891026
+  modified: 1756057891026
+  description: ""
+collection:
+  - name: Self-Soverign Identity
+    meta:
+      id: fld_03d3d44feca14a819f4b8048628346b8
+      created: 1759451230921
+      modified: 1759451230921
+      sortKey: -1759451230921
+      description: ""
+    children:
+      - name: Holder
+        meta:
+          id: fld_e235ce6c3ee04c298ae0ac0f86a94482
+          created: 1759451238994
+          modified: 1759451238994
+          sortKey: -1759451238994
+          description: ""
+        children:
+          - url: http://127.0.0.1:8000/api/auth/register
+            name: /auth/register
+            meta:
+              id: req_abbed6f225bf4626ab475873e1123ca5
+              created: 1759451332245
+              modified: 1759451350770
+              isPrivate: false
+              description: ""
+              sortKey: -1759451336352
+            method: POST
+            body:
+              text: '{     "first_name": "Igor",     "last_name": "Da Rosa
+                Câmara",     "email": "igor.camara12@gmail.com",     "password":
+                "12345678" }'
+              mimeType: application/json
+            headers:
+              - name: Content-Type
+                value: application/json
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+          - url: http://127.0.0.1:8000/api/auth/login
+            name: /auth/login
+            meta:
+              id: req_351833dfa7914a9bbaf5013ee7b4c580
+              created: 1759451361368
+              modified: 1759451371905
+              isPrivate: false
+              description: ""
+              sortKey: -1759451336452
+            method: POST
+            body:
+              text: '{     "email": "igor.camara12@gmail.com",     "password": "12345678" }'
+              mimeType: ""
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+          - url: http://127.0.0.1:8000/api/invitation/receive-url
+            name: /invitation/receive-url
+            meta:
+              id: req_88a280b4c11d4a1d9e2fe9848f14b9ba
+              created: 1759451381423
+              modified: 1759451390057
+              isPrivate: false
+              description: ""
+              sortKey: -1759451336552
+            method: POST
+            body:
+              text: '{     "alias": "teste",     "url":
+                "http://0.0.0.0:8040?oobeyJAdHlwZSI6ICJodHRwczovL2RpZGNvbW0ub3JnL291dC1vZi1iYW5kLzEuMS9pbnZpdGF0aW9uIiwgIkBpZCI6ICJmNDUyODkxNC0wYjY0LTRjMTYtYmMzNi1mMjk1NzkzYzc3MmIiLCAibGFiZWwiOiAiSW52aXRhdGlvbiB0byBCYXJyeSIsICJoYW5kc2hha2VfcHJvdG9jb2xzIjogWyJodHRwczovL2RpZGNvbW0ub3JnL2RpZGV4Y2hhbmdlLzEuMCJdLCAiYWNjZXB0IjogWyJkaWRjb21tL2FpcDEiLCAiZGlkY29tbS9haXAyO2Vudj1yZmMxOSJdLCAic2VydmljZXMiOiBbImRpZDpzb3Y6NGZVRFI5UjdmandFTFJ2SDlKVDZISCJdfQ"
+                }'
+              mimeType: application/json
+            headers:
+              - name: Content-Type
+                value: application/json
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+      - name: Issuer
+        meta:
+          id: fld_f4f36408f71d4762b74324d5d2a596f4
+          created: 1759451244611
+          modified: 1759451244611
+          sortKey: -1759451244611
+          description: ""
+        children:
+          - url: http://127.0.0.1:8001/api/invitation/create-url
+            name: /invitation/create-url
+            meta:
+              id: req_9a9f0797ff254300bcf6a3d149f26038
+              created: 1759451403640
+              modified: 1759458457211
+              isPrivate: false
+              description: ""
+              sortKey: -1759458420724
+            method: POST
+            body:
+              text: '{     "alias": "teste" }'
+              mimeType: application/json
+            headers:
+              - name: Content-Type
+                value: application/json
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+          - url: http://127.0.0.1:8001/api/auth/login
+            name: /auth/login
+            meta:
+              id: req_9ca8772dc8704910865f5ba334c467b6
+              created: 1759451451216
+              modified: 1759458451820
+              isPrivate: false
+              description: ""
+              sortKey: -1759458420774
+            method: POST
+            body:
+              text: '{     "email": "igor.camara12@gmail.com",     "password": "12345678" }'
+              mimeType: ""
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+          - url: http://127.0.0.1:8001/api/auth/register
+            name: /auth/register
+            meta:
+              id: req_2ebdf6e3a2f54c708416c5b8e8e6c438
+              created: 1759451456340
+              modified: 1759458453919
+              isPrivate: false
+              description: ""
+              sortKey: -1759458420874
+            method: POST
+            body:
+              text: '{     "first_name": "Igor",     "last_name": "Da Rosa
+                Câmara",     "email": "igor.camara12@gmail.com",     "password":
+                "12345678" }'
+              mimeType: application/json
+            headers:
+              - name: Content-Type
+                value: application/json
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+          - url: http://127.0.0.1:8001/api/credential/create
+            name: /credential/create
+            meta:
+              id: req_603acf94e51748eb8008130433ba3287
+              created: 1759451560248
+              modified: 1759458463329
+              isPrivate: false
+              description: ""
+              sortKey: -1759458420686.5
+            method: POST
+            body:
+              mimeType: application/json
+              text: |-
+                {
+                	"name": "Certificado de Conclusão",
+                	"version": "1.0",
+                	"attributes": ["Curso", "Ano", "Matrícula"]
+                }
+            headers:
+              - name: Content-Type
+                value: application/json
+              - name: User-Agent
+                value: insomnia/11.4.0
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+          - url: http://127.0.0.1:8001/api/credential
+            name: /credential
+            meta:
+              id: req_6e30dd97251843d18cd35fa56b140d34
+              created: 1759452191139
+              modified: 1759458465337
+              isPrivate: false
+              description: ""
+              sortKey: -1759458420692.75
+            method: GET
+            headers:
+              - name: User-Agent
+                value: insomnia/11.4.0
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+          - url: http://127.0.0.1:8001/api/credential/details
+            name: /credential/details
+            meta:
+              id: req_5d3a7e5d84d24ebaa3fe164a869c7ae2
+              created: 1759452835890
+              modified: 1759458469020
+              isPrivate: false
+              description: ""
+              sortKey: -1759458420680.25
+            method: POST
+            body:
+              mimeType: application/json
+              text: >-
+                {
+                	"schema_id": "4fUDR9R7fjwELRvH9JT6HH:2:Certificado de Conclusão:1.0"
+                }
+            headers:
+              - name: Content-Type
+                value: application/json
+              - name: User-Agent
+                value: insomnia/11.4.0
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+          - url: http://127.0.0.1:8001/api/connection/all
+            name: /connection/all
+            meta:
+              id: req_3c7037129f8b447ebed1316a9829e5f8
+              created: 1759453622705
+              modified: 1759458460330
+              isPrivate: false
+              description: ""
+              sortKey: -1759458420699
+            method: GET
+            headers:
+              - name: User-Agent
+                value: insomnia/11.4.0
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+          - url: http://127.0.0.1:8001/api/credential/offer
+            name: /credential/offer
+            meta:
+              id: req_df9b1ce215334d89a0c6d0a677e57d27
+              created: 1759458420674
+              modified: 1759458440198
+              isPrivate: false
+              description: ""
+              sortKey: -1759458420674
+            method: POST
+            headers:
+              - name: User-Agent
+                value: insomnia/11.4.0
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+          - url: http://127.0.0.1:8001/api/credential/issued
+            name: /credential/issued
+            meta:
+              id: req_29c553c410294eaea92668276af4409a
+              created: 1759458888612
+              modified: 1759458958359
+              isPrivate: false
+              description: ""
+              sortKey: -1759458888612
+            method: GET
+            headers:
+              - name: User-Agent
+                value: insomnia/11.4.0
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              cookies:
+                send: true
+                store: true
+              rebuildPath: true
+      - name: Issuer/Verifier
+        meta:
+          id: fld_b0297b457f8b4059a7070ca0d1948842
+          created: 1759451253069
+          modified: 1759451253069
+          sortKey: -1759451253069
+          description: ""
+      - url: http://127.0.0.1:8000/api/health
+        name: /health
+        meta:
+          id: req_3e75d9b7c10344438d8b4531da98cd47
+          created: 1759451291172
+          modified: 1759451307801
+          isPrivate: false
+          description: ""
+          sortKey: -1759451275843
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+cookieJar:
+  name: Default Jar
+  meta:
+    id: jar_99d30891da4bdcebc63947a8fc17f076de878684
+    created: 1756057902360
+    modified: 1756057960827
+  cookies:
+    - key: TS01a6ef0c
+      value: 01947e038ade818db8b1f48a634bcbe0eb4babe8df54ba4458b7727abb1e518c2c1e71b2c5a8258c8e8b33b5c7f1d8c434f88c6d63
+      domain: giuapihml.unimed.coop.br
+      path: /
+      hostOnly: false
+      creation: 2025-08-24T17:52:40.825Z
+      lastAccessed: 2025-08-24T17:52:40.825Z
+      id: a0c4a121-141b-4334-9ab3-d479d2742098
+environments:
+  name: Base Environment
+  meta:
+    id: env_99d30891da4bdcebc63947a8fc17f076de878684
+    created: 1756057902212
+    modified: 1756057902212
+    isPrivate: false
