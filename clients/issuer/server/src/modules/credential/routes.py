@@ -9,7 +9,8 @@ from modules.credential.service import (
     get_credential_by_id,
     get_credential_definition_by_id,
     send_credential_offer,
-    get_connection_by_id
+    get_connection_by_id,
+    get_issued_credentials
 )
 
 router = APIRouter(prefix="/credential", tags=["credential"])
@@ -88,7 +89,36 @@ async def offer_credential(offer_request: CredentialOfferRequest):
     return JSONResponse(
         status_code=200,
         content=SuccessResponse(data=offer_result).model_dump()
-    )    
+    )
+
+@router.get("/issued", response_model=SuccessResponse)
+async def get_issued_credentials_list():
+    """
+    Get all issued credentials with their status.
+    Returns compiled data with the most important information:
+    - Which credential was issued (credential name)
+    - When it was issued (timestamp)
+    - To whom it was issued (holder alias or DID)
+    - What is the current status
+    """
+    issued_credentials = await get_issued_credentials()
+
+    if isinstance(issued_credentials, str):
+        return JSONResponse(
+            status_code=500,
+            content=ErrorResponse(
+                code="issued_credentials_retrieval_failed",
+                data=issued_credentials
+            ).model_dump()
+        )
+
+    # Convert Pydantic models to dictionaries for JSON response
+    credentials_data = [cred.model_dump() for cred in issued_credentials]
+
+    return JSONResponse(
+        status_code=200,
+        content=SuccessResponse(data=credentials_data).model_dump()
+    )
 
 # Teoricamente não precisa porque ela já está sendo enviada automaticamente pelo acapy --auto-respond-credential-offer --auto-respond-credential-request
 #@router.post("/issue")
