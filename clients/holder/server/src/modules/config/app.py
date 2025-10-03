@@ -9,6 +9,7 @@ from modules.utils.model import SuccessResponse
 from modules.auth import routes as auth_routes
 from modules.invitation import routes as invitation_routes
 from modules.connection import routes as connection_routes
+from modules.credential import routes as credential_routes
 
 def create_app() -> FastAPI:
     """Create and configure FastAPI application"""
@@ -36,5 +37,6 @@ def create_app() -> FastAPI:
     app.include_router(auth_routes.router, prefix="/api")
     app.include_router(invitation_routes.router, prefix="/api")
     app.include_router(connection_routes.router, prefix="/api")
+    app.include_router(credential_routes.router, prefix="/api")
 
     return app
