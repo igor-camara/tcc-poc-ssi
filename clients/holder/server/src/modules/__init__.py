@@ -2,9 +2,11 @@
 from modules.config.settings import settings
 from modules.config.app import create_app
 from modules.user.schema import User
+from modules.webhook.schema import Notification
 
 # Create app instance
 app = create_app()
 
 # Initialize database
 User.init_db()
+Notification.init_db()

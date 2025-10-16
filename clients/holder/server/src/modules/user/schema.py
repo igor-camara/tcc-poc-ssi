@@ -87,10 +87,11 @@ class User:
     @classmethod
     def find_by_email(cls, email):
         """Find user by email"""
+        print(email)
         conn = cls._get_db_connection()
         row = conn.execute('SELECT * FROM users WHERE email = ?', (email.lower(),)).fetchone()
         conn.close()
-        
+        print(row)
         if row:
             return cls._from_row(row)
         return None
@@ -109,11 +110,10 @@ class User:
     @classmethod
     def _from_row(cls, row):
         """Create User instance from database row"""
-        import json
-        
+
         created_at = datetime.fromisoformat(row['created_at']) if row['created_at'] else datetime.utcnow()
         updated_at = datetime.fromisoformat(row['updated_at']) if row['updated_at'] else datetime.utcnow()
-        
+
         user = cls(
             id=row['id'],
             email=row['email'],
@@ -126,6 +126,7 @@ class User:
             updated_at=updated_at
         )
         user.password_hash = row['password_hash']
+        
         return user
     
     def save(self):
@@ -162,19 +163,6 @@ class User:
                     int(self.is_active), self.did, self.verkey, self.created_at.isoformat(), self.updated_at.isoformat()
                 ))
             
-            conn.commit()
-            return True
-        except Exception as e:
-            conn.rollback()
-            raise e
-        finally:
-            conn.close()
-    
-    def delete(self):
-        """Delete user from database"""
-        conn = self._get_db_connection()
-        try:
-            conn.execute('DELETE FROM users WHERE id = ?', (self.id,))
             conn.commit()
             return True
         except Exception as e:

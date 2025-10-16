@@ -1,0 +1,14 @@
+Criar conexão (sem auto-accept):
+
+Config de:
+
+--endpoint
+
+Tem que ser um endpoint que ambos os atores consigam acessar pela rede
+
+Para ator1 e ator2
+
+    ator1 - /out-of-band/create-invitation
+    ator2 - /out-of-band/receive-invitation
+    ator2 - /didexchange/{conn_id}/accept-invitation
+    ator1 - /didexchange/{conn_id}/accept-request
