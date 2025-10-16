@@ -30,6 +30,7 @@ async def create_did(alias: str = None) -> dict | str:
             'alias': alias
         }
     except Exception as e:
+        print(e)
         return "DID_CREATION_FAILED"
 
 #async def register_did_on_ledger(did, verkey, alias=None) -> bool:
@@ -51,7 +52,7 @@ async def parse_invitation_url(invitation_url: str) -> dict | str:
     try:
         parsed_url = urllib.parse.urlparse(invitation_url)
         query_params = urllib.parse.parse_qs(parsed_url.query)
-        
+
         invitation_data = None
         
         if 'c_i' in query_params:
@@ -77,7 +78,8 @@ async def parse_invitation_url(invitation_url: str) -> dict | str:
                 
                 invitation_json = base64.urlsafe_b64decode(invitation_b64).decode('utf-8')
                 invitation_data = json.loads(invitation_json)
-            except Exception:
+            except Exception as e:
+                print(e)
                 return "INVITATION_DECODE_FAILED"
             
         elif 'd_m' in query_params:
@@ -156,6 +158,7 @@ async def receive_invitation(invitation_payload: dict) -> dict | str:
         connection_info = result.to_dict() if hasattr(result, 'to_dict') else result
         
         return connection_info
-        
-    except Exception:
+
+    except Exception as e:
+        print(e)
         return "INVITATION_RECEIVE_FAILED"

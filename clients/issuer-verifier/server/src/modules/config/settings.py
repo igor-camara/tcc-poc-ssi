@@ -20,8 +20,10 @@ class Settings:
         self.access_token_expire_minutes = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 
         BASE_DIR = Path(__file__).resolve().parents[6]
-        DB_PATH = BASE_DIR / "db" / "verifier.db"
+        DB_PATH = BASE_DIR / "db" / "issuer.db"
         
         self.database_url = os.getenv("DATABASE_URL", f"sqlite:///{DB_PATH}")
+
+        self.company_name = os.getenv("COMPANY_NAME", "A Grande Federação")
 
 settings = Settings()

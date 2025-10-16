@@ -5,7 +5,7 @@ networks:
 services:
   # Holder Agent
   holder:
-    image: bcgovimages/aries-cloudagent:py3.12_1.2.0
+    image: ghcr.io/openwallet-foundation/acapy-agent:py3.12-1.3.0
     container_name: ssi-holder
     ports:
       - "8030:8030"  # Inbound transport
@@ -16,7 +16,7 @@ services:
       - von
     command: >
       start
-        --endpoint http://0.0.0.0:8030
+        --endpoint http://holder:8030
         --label HolderWallet
         --inbound-transport http 0.0.0.0 8030
         --outbound-transport http
@@ -29,15 +29,11 @@ services:
         --preserve-exchange-records
         --auto-provision
         --genesis-url http://webserver:8000/genesis
+        --webhook-url http://192.168.15.20:8000/webhook
         --log-level INFO
-        --auto-ping-connection
-        --auto-respond-messages
+        --debug-connections
         --auto-accept-invites
         --auto-accept-requests
-        --auto-respond-credential-proposal
-        --auto-respond-credential-offer
-        --auto-respond-credential-request
-        --auto-store-credential
 
   # create Public DID for Issuer - Usado para que os usuários da entidade Issuer possam fazer cadastro de schemas na ledger
 
@@ -45,9 +41,7 @@ services:
     image: appropriate/curl
     entrypoint: >
       sh -c "
-        echo 'Registrando DID na ledger...';
         curl -X POST http://webserver:8000/register -H 'Content-Type: application/json' -d '{\"seed\":\"000000000000000000000000Issuer01\",\"role\":\"TRUST_ANCHOR\"}';
-        echo 'feito';
       "
     networks:
     - von
@@ -55,7 +49,7 @@ services:
 
   # Issuer Agent
   issuer:
-    image: bcgovimages/aries-cloudagent:py3.12_1.2.0
+    image: ghcr.io/openwallet-foundation/acapy-agent:py3.12-1.3.0
     depends_on:
       - ledger-bootstrap-issuer
     container_name: ssi-issuer
@@ -68,7 +62,7 @@ services:
       - von
     command: >
       start
-        --endpoint http://0.0.0.0:8040
+        --endpoint http://issuer:8040
         --label IssuerWallet
         --inbound-transport http 0.0.0.0 8040
         --outbound-transport http
@@ -84,18 +78,23 @@ services:
         --auto-provision
         --genesis-url http://webserver:8000/genesis
         --log-level INFO
-        --auto-ping-connection
-        --auto-respond-messages
+        --debug-connections
         --auto-accept-invites
         --auto-accept-requests
-        --auto-respond-credential-proposal
-        --auto-respond-credential-offer
-        --auto-respond-credential-request
-        --auto-store-credential
+
+  ledger-bootstrap-issuer-verifier:
+    image: appropriate/curl
+    entrypoint: >
+      sh -c "
+        curl -X POST http://webserver:8000/register -H 'Content-Type: application/json' -d '{\"seed\":\"0000000000000000000000Verifier01\",\"role\":\"TRUST_ANCHOR\"}';
+      "
+    networks:
+    - von
+    restart: "no"
 
   # Issuer+Verifier Agent
   issuer-verifier:
-    image: bcgovimages/aries-cloudagent:py3.12_1.2.0
+    image: ghcr.io/openwallet-foundation/acapy-agent:py3.12-1.3.0
     container_name: ssi-issuer-verifier
     ports:
       - "8050:8050"  # Inbound transport
@@ -105,13 +104,15 @@ services:
     networks:
       - von
     command: >
-      start
-        --endpoint http://0.0.0.0:8050
+        start
+        --endpoint http://issuer-verifier:8050
         --label IssuerVerifierWallet
         --inbound-transport http 0.0.0.0 8050
         --outbound-transport http
         --admin 0.0.0.0 8051
         --admin-insecure-mode
+        --seed 0000000000000000000000Verifier01
+        --public-invites
         --wallet-type askar
         --wallet-name issuer-verifier.agent420695
         --wallet-key issuer-verifier.agent420695
@@ -120,14 +121,6 @@ services:
         --auto-provision
         --genesis-url http://webserver:8000/genesis
         --log-level INFO
-        --auto-ping-connection
-        --auto-respond-messages
+        --debug-connections
         --auto-accept-invites
         --auto-accept-requests
-        --auto-respond-credential-proposal
-        --auto-respond-credential-offer
-        --auto-respond-credential-request
-        --auto-store-credential
-        --auto-respond-presentation-proposal
-        --auto-respond-presentation-request
-        --auto-verify-presentation

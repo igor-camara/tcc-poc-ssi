@@ -1,8 +1,8 @@
 import modules.user.service as user_service
-import modules.invitation.service as agent_service
 from modules.auth.schema import AuthRegisterRequest, AuthLoginRequest
 from modules.utils.token import create_access_token
 from modules.utils.password import verify_password
+from modules.utils.ssi import create_did
 
 async def register_user(credentials: AuthRegisterRequest) -> tuple[dict, dict] | str:
     existing_user = user_service.get_user_by_email(credentials.email)
@@ -10,8 +10,9 @@ async def register_user(credentials: AuthRegisterRequest) -> tuple[dict, dict] |
         return "USER_ALREADY_EXISTS"
 
     try:
-        did_info = await agent_service.create_did(credentials.email)
+        did_info = await create_did(credentials.email)
     except Exception as e:
+        print(e)
         return "DID_CREATION_FAILED"
 
     user = user_service.create_user(

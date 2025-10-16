@@ -1,22 +1,9 @@
-from typing import Optional
-from modules.utils.ssi import get_client
+from modules.client.service import AcaPyClient
 
-async def create_invitation(alias: Optional[str] = None, auto_accept: bool = True) -> dict | str:
-    invitation_body = {}
-    
-    if alias:
-        invitation_body["alias"] = alias
-        invitation_body["my_label"] = "Invitation to " + alias
-    
-    if auto_accept:
-        invitation_body["accept"] = ["didcomm/aip1", "didcomm/aip2;env=rfc19"]
-    
-    invitation_body["handshake_protocols"] = ["https://didcomm.org/didexchange/1.0"]
+def create_invitation(alias: str) -> dict | str:
+    public_did = AcaPyClient.did.get_public_did()
 
-    result = await get_client().out_of_band.create_invitation(
-        body=invitation_body
-    )
-    
-    invitation_data = result.to_dict() if hasattr(result, 'to_dict') else result
-    
-    return invitation_data
+    if not public_did:
+        return "NO_PUBLIC_DID_FOUND"
+
+    return AcaPyClient.connection.create(alias, f"Convite de conexão para {alias}", public_did=public_did['did'])

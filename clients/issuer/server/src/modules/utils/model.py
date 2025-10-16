@@ -18,7 +18,7 @@ class BaseResponse(BaseModel, Generic[T]):
 class SuccessResponse(BaseResponse[T]):
     code: str = "SUCCESS"
 
-class ErrorResponse(BaseResponse[str | dict]):
+class ErrorResponse(BaseResponse[str]):
     code: str = Field(..., description="Código de erro")
-    data: str | dict = Field(..., description="Mensagem de erro")
+    data: str = Field(..., description="Mensagem de erro")
 

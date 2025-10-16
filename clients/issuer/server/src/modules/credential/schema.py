@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from modules.utils.model import SuccessResponse
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional
 
 class CreateCredentialRequest(BaseModel):
     name: str = Field(..., description="Name of the schema")
@@ -15,9 +15,8 @@ class CredentialDetail(BaseModel):
 
 class CredentialOfferRequest(BaseModel):
     connection_id: str = Field(..., description="Connection ID with the holder")
-    cred_def_id: str = Field(..., description="Credential definition ID")
-    attributes: Dict[str, Any] = Field(..., description="Credential attributes as key-value pairs")
-    comment: str = Field(default="", description="Optional comment for the credential offer")
+    schema_id: str = Field(..., description="Schema ID for the credential")
+    attributes: List[Dict] = Field(..., description="Attributes for the credential")
 
 class IssuedCredentialRecord(BaseModel):
     credential_exchange_id: str = Field(..., description="ID of the credential exchange")

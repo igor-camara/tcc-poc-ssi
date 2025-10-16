@@ -2,16 +2,28 @@ import modules.user.service as user_service
 from modules.auth.schema import AuthRegisterRequest, AuthLoginRequest
 from modules.utils.token import create_access_token
 from modules.utils.password import verify_password
-from modules.utils.ssi import create_did
+from modules.client.service import AcaPyClient
 
-async def register_user(credentials: AuthRegisterRequest) -> tuple[dict, dict] | str:
+def register_user(credentials: AuthRegisterRequest) -> tuple[dict, dict] | str:
     existing_user = user_service.get_user_by_email(credentials.email)
     if existing_user:
         return "USER_ALREADY_EXISTS"
 
     try:
-        did_info = await create_did(credentials.email)
+        did_info = AcaPyClient.did.create()
+
+        ledger_response = AcaPyClient.did.register_on_ledger(
+            did=did_info['did'],
+            verkey=did_info['verkey'],
+            method=did_info['method'],
+            alias=credentials.email,
+        )
+        
+        if not ledger_response or not ledger_response.get("success"):
+            return "DID_REGISTRATION_FAILED"
+            
     except Exception as e:
+        print(e)
         return "DID_CREATION_FAILED"
 
     user = user_service.create_user(

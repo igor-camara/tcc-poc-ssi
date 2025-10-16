@@ -1,16 +1,15 @@
-from modules.utils.headers import AuthHeaders
 import modules.auth.service as auth_service
 from modules.utils.model import ErrorResponse
-from modules.auth.schema import AuthRegisterRequest, AuthLoginRequest, AuthResponse
+from modules.auth.schema import AuthRegisterRequest, AuthLoginRequest, SuccessResponse
 from fastapi.responses import JSONResponse
 from fastapi import APIRouter, status
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-@router.post("/register", response_model=AuthResponse)
-async def register_user(credentials: AuthRegisterRequest):
+@router.post("/register", response_model=SuccessResponse)
+def register_user(credentials: AuthRegisterRequest):
     try:
-        result = await auth_service.register_user(credentials)
+        result = auth_service.register_user(credentials)
 
         if result == "USER_ALREADY_EXISTS":
             return JSONResponse(
@@ -22,9 +21,14 @@ async def register_user(credentials: AuthRegisterRequest):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 content=ErrorResponse(code=result, data="Falha na criação do DID").model_dump()
             )
+        if result == "DID_REGISTRATION_FAILED":
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content=ErrorResponse(code=result, data="Falha ao registrar DID no ledger").model_dump()
+            )
 
         auth, headers = result
-        return JSONResponse(status_code=201, content=AuthResponse(data=auth).model_dump(), headers=AuthHeaders(**headers).model_dump(by_alias=True))
+        return JSONResponse(status_code=201, content=SuccessResponse(data=auth).model_dump())
 
     except Exception as e:
         return JSONResponse(
@@ -32,7 +36,7 @@ async def register_user(credentials: AuthRegisterRequest):
             content=ErrorResponse(code="INTERNAL_SERVER_ERROR", data=e.args[0] if e.args else "Erro ao registrar usuário").model_dump()
         )
 
-@router.post("/login", response_model=AuthResponse)
+@router.post("/login", response_model=SuccessResponse)
 def login_user(credentials: AuthLoginRequest):
     try:
         result = auth_service.login_user(credentials)
@@ -49,7 +53,7 @@ def login_user(credentials: AuthLoginRequest):
             )
 
         auth, headers = result
-        return JSONResponse(status_code=200, content=AuthResponse(data=auth).model_dump(), headers=AuthHeaders(**headers).model_dump(by_alias=True))
+        return JSONResponse(status_code=200, content=SuccessResponse(data=auth).model_dump())
 
 
     except Exception as e:

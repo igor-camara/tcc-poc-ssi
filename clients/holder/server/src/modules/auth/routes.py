@@ -10,7 +10,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/register", response_model=AuthResponse)
 async def register_user(credentials: AuthRegisterRequest):
     try:
+        print(credentials.json())
         result = await auth_service.register_user(credentials)
+        print(result)
 
         if result == "USER_ALREADY_EXISTS":
             return JSONResponse(

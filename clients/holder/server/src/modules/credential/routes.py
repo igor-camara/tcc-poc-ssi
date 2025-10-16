@@ -1,23 +1,22 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from modules.utils.model import SuccessResponse, ErrorResponse
-from modules.credential.service import get_holder_credentials
+from modules.credential.service import get_holder_credentials, get_offers, accept_offer
 
 router = APIRouter(prefix="/credential", tags=["credential"])
 
-@router.get("/my-credentials", response_model=SuccessResponse)
-async def list_holder_credentials():
-    """
-    Lista todas as credenciais que o Holder possui.
+@router.get("/offers", response_model=SuccessResponse)
+def list_credential_offers():
+    offers = get_offers()
     
-    Retorna informações sobre:
-    - Quem emitiu a credencial (issuer_did, issuer_alias)
-    - Quando a credencial foi emitida (issued_at)
-    - Nome/Descrição da credencial (credential_name)
-    - Detalhes da credencial (attributes, version)
-    - Status da credencial (status, is_valid)
-    """
-    credentials = await get_holder_credentials()
+    return JSONResponse(
+        status_code=200,
+        content=SuccessResponse(data=offers or []).model_dump()
+    )
+
+@router.get("/my-credentials", response_model=SuccessResponse)
+def list_holder_credentials():
+    credentials = get_holder_credentials()
     
     if isinstance(credentials, str):
         return JSONResponse(
@@ -27,11 +26,38 @@ async def list_holder_credentials():
                 data="Falha ao recuperar as credenciais"
             ).model_dump()
         )
-    
-    # Converte os modelos Pydantic para dicionários
-    credentials_data = [cred.model_dump() for cred in credentials]
+        
+    return JSONResponse(
+        status_code=200,
+        content=SuccessResponse(data=credentials).model_dump()
+    )
+
+@router.post("/accept-offer", response_model=SuccessResponse)
+async def accept_credential_offer(request: Request):
+    body = await request.json()
+    cred_ex_id = body.get("cred_ex_id")
+
+    if not cred_ex_id:
+        return JSONResponse(
+            status_code=400,
+            content=ErrorResponse(
+                code="invalid_request",
+                data="cred_ex_id is required"
+            ).model_dump()
+        )
+
+    result = accept_offer(cred_ex_id)
+
+    if result == "OFFER_ACCEPTANCE_FAILED":
+        return JSONResponse(
+            status_code=500,
+            content=ErrorResponse(
+                code="offer_acceptance_failed",
+                data="Failed to accept the credential offer"
+            ).model_dump()
+        )
     
     return JSONResponse(
         status_code=200,
-        content=SuccessResponse(data=credentials_data).model_dump()
+        content=SuccessResponse(data=result).model_dump()
     )
