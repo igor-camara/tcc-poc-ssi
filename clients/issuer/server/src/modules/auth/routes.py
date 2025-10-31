@@ -16,19 +16,7 @@ def register_user(credentials: AuthRegisterRequest):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content=ErrorResponse(code=result, data="Usuário já existe").model_dump()
             )
-        if result == "DID_CREATION_FAILED":
-            return JSONResponse(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content=ErrorResponse(code=result, data="Falha na criação do DID").model_dump()
-            )
-        if result == "DID_REGISTRATION_FAILED":
-            return JSONResponse(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content=ErrorResponse(code=result, data="Falha ao registrar DID no ledger").model_dump()
-            )
-
-        auth, headers = result
-        return JSONResponse(status_code=201, content=SuccessResponse(data=auth).model_dump())
+        return JSONResponse(status_code=201, content=SuccessResponse(data=result).model_dump())
 
     except Exception as e:
         return JSONResponse(
@@ -52,8 +40,7 @@ def login_user(credentials: AuthLoginRequest):
                 content=ErrorResponse(code=result, data="Senha inválida").model_dump()
             )
 
-        auth, headers = result
-        return JSONResponse(status_code=200, content=SuccessResponse(data=auth).model_dump())
+        return JSONResponse(status_code=200, content=SuccessResponse(data=result).model_dump())
 
 
     except Exception as e:

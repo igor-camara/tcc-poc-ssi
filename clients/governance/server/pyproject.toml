@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "governance-server"
+version = "0.1.0"
+description = "FastAPI server for SSI governance"
+authors = ["Igor Câmara <igor.camara@datasinapse.com.br>"]
+packages = [{ include = "*", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.119.0"
+uvicorn = { version = ">=0.37.0,<0.38.0", extras = ["standard"] }
+python-dotenv = ">=1.1.1,<2.0.0"
+pymongo = "^4.10.1"
+pydantic = {extras = ["email"], version = "^2.0.0"}
+pyotp = "^2.9.0"
+qrcode = "^8.2"
+pillow = "^12.0.0"
+httpx = "^0.28.1"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

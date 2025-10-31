@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuração do Google Authenticator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .qr-container {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .qr-code {
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .info-box h3 {
+            margin-top: 0;
+            color: #1976D2;
+        }
+        .secret-code {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin: 15px 0;
+            word-break: break-all;
+        }
+        .instructions {
+            margin: 20px 0;
+        }
+        .instructions ol {
+            line-height: 1.8;
+        }
+        .instructions li {
+            margin: 10px 0;
+        }
+        .username {
+            color: #667eea;
+            font-weight: bold;
+        }
+        .test-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #fff3e0;
+            border-radius: 8px;
+            border-left: 4px solid #ff9800;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #f57c00;
+        }
+        .code-block {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Configuração do TOTP</h1>
+        <p class="subtitle">Configure o Google Authenticator para o usuário <span class="username" id="username"></span></p>
+        
+        <div class="info-box">
+            <h3>📱 Passo 1: Escaneie o QR Code</h3>
+            <p>Abra o Google Authenticator no seu celular e escaneie o código abaixo:</p>
+        </div>
+        
+        <div class="qr-container">
+            <img id="qrCode" class="qr-code" alt="QR Code para Google Authenticator">
+        </div>
+        
+        <div class="info-box">
+            <h3>🔑 Ou insira manualmente:</h3>
+            <p>Se preferir, você pode inserir este código manualmente no aplicativo:</p>
+            <div class="secret-code" id="secret"></div>
+        </div>
+        
+        <div class="instructions">
+            <h3>📋 Instruções completas:</h3>
+            <ol>
+                <li>Instale o Google Authenticator no seu celular (disponível na Play Store ou App Store)</li>
+                <li>Abra o aplicativo e clique em "+" ou "Adicionar conta"</li>
+                <li>Escolha "Escanear código QR" e aponte a câmera para o código acima</li>
+                <li>O aplicativo irá adicionar a conta automaticamente</li>
+                <li>Use o código de 6 dígitos gerado para fazer login</li>
+            </ol>
+        </div>
+        
+        <div class="test-section">
+            <h3>🧪 Testando a Autenticação</h3>
+            <p>Após configurar o Google Authenticator, teste o login com este comando:</p>
+            <div class="code-block">
+curl -X POST "http://127.0.0.1:8003/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "<span id="username2"></span>",
+    "totp_code": "XXXXXX"
+  }'
+            </div>
+            <p><strong>Substitua XXXXXX</strong> pelo código de 6 dígitos exibido no seu Google Authenticator.</p>
+        </div>
+    </div>
+
+    <script>
+        // Pegar o username da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const username = urlParams.get('username') || 'igor.admin';
+        
+        // Fazer requisição para obter os dados do TOTP
+        fetch(`/api/auth/setup/${username}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('username').textContent = data.username;
+                document.getElementById('username2').textContent = data.username;
+                document.getElementById('qrCode').src = data.qr_code_url;
+                document.getElementById('secret').textContent = data.secret;
+            })
+            .catch(error => {
+                console.error('Erro ao carregar dados do TOTP:', error);
+                alert('Erro ao carregar configuração do TOTP');
+            });
+    </script>
+</body>
+</html>

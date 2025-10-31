@@ -23,6 +23,7 @@ def create_credential(credential: CreateCredentialRequest):
         schema_version=credential.version,
         attributes=credential.attributes
     )
+
     if isinstance(schema, str) or not schema:
         return JSONResponse(status_code=400, content=ErrorResponse(code=schema, data="Schema creation failed").model_dump())
 

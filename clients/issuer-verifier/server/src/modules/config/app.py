@@ -9,6 +9,9 @@ from modules.auth import routes as auth_routes
 from modules.invitation import routes as invitation_routes
 from modules.credential import routes as credential_routes
 from modules.connection import routes as connection_routes
+from modules.ledger import routes as ledger_routes
+from modules.proof import routes as proof_routes
+from modules.webhook import routes as webhook_routes
 
 def create_app() -> FastAPI:
     """Create and configure FastAPI application"""
@@ -34,5 +37,8 @@ def create_app() -> FastAPI:
     app.include_router(invitation_routes.router, prefix="/api")
     app.include_router(credential_routes.router, prefix="/api")
     app.include_router(connection_routes.router, prefix="/api")
+    app.include_router(ledger_routes.router, prefix="/api")
+    app.include_router(proof_routes.router, prefix="/api")
+    app.include_router(webhook_routes.router)
 
     return app

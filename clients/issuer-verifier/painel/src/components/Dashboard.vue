@@ -62,12 +62,16 @@
          <!-- Page Content -->
          <main class="flex-1 p-6">
             <div class="bg-white/10 backdrop-blur-md rounded-lg border border-white/20 p-8 h-full">
+               <!-- Ledger Key Content -->
+               <LedgerKeyManager v-if="activeMenu === 'ledger-key'" />
                <!-- Connections Content -->
-               <ConnectionsManager v-if="activeMenu === 'my-connections'" />
+               <ConnectionsManager v-else-if="activeMenu === 'my-connections'" />
                <!-- Credentials Content -->
                <CredentialsManager v-else-if="activeMenu === 'my-credentials'" />
                <!-- Issued Credentials Content -->
                <IssuedCredentialsManager v-else-if="activeMenu === 'answer-issue-request'" />
+               <!-- Proof Request Content -->
+               <ProofRequestForm v-else-if="activeMenu === 'proof-request'" />
             </div>
          </main>
       </div>
@@ -81,11 +85,15 @@ import {
   LayoutDashboard, 
   BarChart3, 
   CreditCard, 
-  LogOut 
+  Key,
+  LogOut, 
+  HatGlasses
 } from 'lucide-vue-next'
 import ConnectionsManager from './ConnectionsManager.vue'
 import CredentialsManager from './CredentialsManager.vue'
 import IssuedCredentialsManager from './IssuedCredentialsManager.vue'
+import LedgerKeyManager from './LedgerKeyManager.vue'
+import ProofRequestForm from './ProofRequestForm.vue'
 import { useAuthStore } from '@/stores'
 
 // Store
@@ -113,6 +121,8 @@ const menuItems = [
   { id: 'my-connections', label: 'Minhas conexões', icon: LayoutDashboard },
   { id: 'my-credentials', label: 'Credenciais', icon: BarChart3 },
   { id: 'answer-issue-request', label: 'Credenciais Emitidas', icon: CreditCard },
+  { id: 'proof-request', label: 'Proof Requests', icon: HatGlasses },
+  { id: 'ledger-key', label: 'Chave do Ledger', icon: Key },
 ]
 
 // User data - compatível com ambas as estruturas

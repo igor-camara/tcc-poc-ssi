@@ -69,10 +69,7 @@
                <!-- Credential Offers Content -->
                <CredentialOffers v-else-if="activeMenu === 'answer-issue-request'" />
                <!-- Proof Request Content -->
-               <div v-else-if="activeMenu === 'answer-proof-request'" class="space-y-6">
-                  <h2 class="text-xl font-semibold text-white mb-4">Pedidos de Prova</h2>
-                  <p class="text-purple-200">Solicitações de prova de credenciais pendentes.</p>
-               </div>
+               <ProofRequests v-else-if="activeMenu === 'answer-proof-request'" />
             </div>
          </main>
       </div>
@@ -91,6 +88,7 @@ import {
 import ConnectionsManager from './ConnectionsManager.vue'
 import CredentialOffers from './CredentialOffers.vue'
 import MyCredentials from './MyCredentials.vue'
+import ProofRequests from './ProofRequests.vue'
 import { useAuthStore } from '@/stores'
 
 // Store

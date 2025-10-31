@@ -1,11 +1,27 @@
-from typing import List, Dict, Any
-from modules.utils.ssi import get_client
+import httpx
+from typing import List
 from modules.credential.schema import CredentialDetail, IssuedCredentialRecord
 from modules.client.service import AcaPyClient
+from modules.config.settings import settings
 
 def create_schema(schema_name: str, schema_version: str, attributes: List[str]) -> dict | str:
     try:
-        return AcaPyClient.schemas.create_schema(schema_name=schema_name, schema_version=schema_version, attributes=attributes)
+        schema = AcaPyClient.schemas.create_schema(schema_name=schema_name, schema_version=schema_version, attributes=attributes)
+        if schema and isinstance(schema, dict) and 'schema_id' in schema:
+            gov_url = settings.governance_url.rstrip('/') + "/api/schemas"
+            gov_headers = {
+                "X-API-Key": settings.governance_api_key,
+                "Content-Type": "application/json"
+            }
+
+            gov_payload = {"schema_id": schema["schema_id"]}
+            try:
+                response = httpx.post(gov_url, json=gov_payload, headers=gov_headers, timeout=120.0)
+                if response.status_code != 200:
+                    print(f"Falha ao enviar schema para governança: {response.status_code} - {response.text}")
+            except Exception as gov_exc:
+                print(f"Erro ao enviar schema para governança: {gov_exc}")
+        return schema
     except Exception as e:
         print(e)
         return "SCHEMA_CREATION_FAILED"
@@ -113,7 +129,7 @@ def get_issued_credentials() -> List[IssuedCredentialRecord] | str:
             if connection_id:
                 connection = get_connection_by_id(connection_id)
                 if connection and isinstance(connection, dict):
-                    holder_alias = connection.get('their_label') or connection.get('alias')
+                    holder_alias = connection.get('alias') or connection.get('their_label')
             
             # Extract credential attributes from the credential preview
             attributes = {}

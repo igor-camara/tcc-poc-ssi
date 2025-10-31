@@ -11,6 +11,13 @@ export interface CredentialOffer {
   connection_id: string
   schema_id: string
   cred_def_id: string
+  credential_preview?: {
+    '@type'?: string
+    attributes: Array<{
+      name: string
+      value: string
+    }>
+  }
 }
 
 export interface AcceptOfferRequest {
@@ -87,10 +94,12 @@ export const useCredentialStore = defineStore('credential', () => {
     return result
   }
 
-  async function fetchCredentials(): Promise<Credential[] | null> {
+  async function fetchCredentials(did: string): Promise<Credential[] | null> {
     const result = await appStore.makeApiCall(async () => {
-      const response = await axiosInstance.get('/credential/my-credentials')
-      
+      const response = await axiosInstance.get('/credential/my-credentials', {
+        params: { did }
+      })
+
       if (response.data.code === 'SUCCESS') {
         const data = response.data.data
         

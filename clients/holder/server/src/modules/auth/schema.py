@@ -16,6 +16,7 @@ class AuthUser(BaseModel):
     user_name: str
     user_surname: str
     user_email: str
+    user_did: str
 
 class AuthResponse(SuccessResponse[AuthUser]):
     data: AuthUser

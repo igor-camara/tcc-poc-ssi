@@ -9,7 +9,6 @@ packages = [{ include = "*", from = "src" }]
 python = ">=3.12"
 fastapi = ">=0.117.1,<0.118.0"
 uvicorn = { version = ">=0.37.0,<0.38.0", extras = ["standard"] }
-aries-cloudcontroller = "==1.3.2rc0.post20250822"
 python-dotenv = ">=1.1.1,<2.0.0"
 passlib = { version = "==1.7.4", extras = ["bcrypt"] }
 bcrypt = "==3.2.2"

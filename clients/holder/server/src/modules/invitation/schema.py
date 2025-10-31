@@ -4,3 +4,4 @@ from pydantic import BaseModel, Field
 class InvitationRequest(BaseModel):
     alias: str = Field(..., example="My Connection")
     url: str = Field(..., example="https://example.com/invitation?token=abc123")
+    user_did: Optional[str] = Field(None, example="did:example:123456789abcdefghi")
