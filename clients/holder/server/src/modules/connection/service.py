@@ -18,7 +18,6 @@ def get_did_document(did: str) -> dict | str:
         if did_info is None:
             return "DID_NOT_FOUND"
 
-
         result = AcaPyClient.did.mount_document(did=did_info['did'], verkey=did_info['verkey'])
 
         if result is None:

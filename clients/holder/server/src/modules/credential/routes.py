@@ -15,8 +15,8 @@ def list_credential_offers():
     )
 
 @router.get("/my-credentials", response_model=SuccessResponse)
-def list_holder_credentials():
-    credentials = get_holder_credentials()
+def list_holder_credentials(did: str):
+    credentials = get_holder_credentials(did)
     
     if isinstance(credentials, str):
         return JSONResponse(

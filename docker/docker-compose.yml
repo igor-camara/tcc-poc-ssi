@@ -1,126 +1,377 @@
 networks:
   von:
     external: true
+  governance-network:
+    driver: bridge
 
 services:
-  # Holder Agent
+  
+  ####### ACAPY ########
+
+  ## GOVERNANCE ##
+  ledger-bootstrap-endorser:
+    image: appropriate/curl
+    container_name: ssi-bootstrap-endorser
+    networks:
+      - von
+    entrypoint: >
+      sh -c "
+        until curl -sf http://webserver:8000/genesis > /dev/null; do
+          echo 'Aguardando von-network...';
+          sleep 2;
+        done;
+        curl -X POST http://webserver:8000/register -H 'Content-Type: application/json' -d '{\"seed\": \"00000000000000GovernanceEndorser\",\"role\": \"TRUSTEE\",\"alias\": \"GovernanceEndorser\"}';
+      "
+    restart: "no"
+
+  endorser:
+    image: ghcr.io/openwallet-foundation/acapy-agent:py3.12-1.3.0
+    container_name: ssi-governance-endorser
+    depends_on:
+      ledger-bootstrap-endorser:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8021:8021"
+    networks:
+      - von
+    environment:
+      - LEDGER_URL=http://webserver:8000
+      - ACAPY_ADMIN_API_KEY=ffbe0d09b05b46b442a82199206a8c9df97e513c06f05dd85075003430221fc6
+      - ACAPY_SEED=00000000000000GovernanceEndorser
+    volumes:
+      - endorser-wallet:/home/indy/.indy_client/wallet
+      
+    command: >
+      start
+        --label "GovernanceEndorser"
+        --endpoint http://endorser:8020
+        --inbound-transport http 0.0.0.0 8020
+        --outbound-transport http
+        --admin 0.0.0.0 8021
+        --admin-api-key ffbe0d09b05b46b442a82199206a8c9df97e513c06f05dd85075003430221fc6
+        --wallet-type askar
+        --wallet-name governance_endorser
+        --wallet-key ffbe0d09b05b46b442a82199206a8c9df97e513c06f05dd85075003430221fc6
+        --wallet-storage-type default
+        --seed 00000000000000GovernanceEndorser
+        --genesis-url http://webserver:8000/genesis
+        --auto-provision
+        --log-level info
+        --preserve-exchange-records
+        
+    healthcheck:
+      test: >
+        curl -f -H "X-API-Key: ffbe0d09b05b46b442a82199206a8c9df97e513c06f05dd85075003430221fc6"
+        http://localhost:8021/status
+        || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  ## HOLDER ##
   holder:
     image: ghcr.io/openwallet-foundation/acapy-agent:py3.12-1.3.0
     container_name: ssi-holder
     ports:
-      - "8030:8030"  # Inbound transport
-      - "8031:8031"  # Admin API
-    environment:
-      - LEDGER_URL=http://webserver:8000
+      - "8030:8030"
+      - "8031:8031"
     networks:
       - von
+    environment:
+      - LEDGER_URL=http://webserver:8000
+      - ACAPY_ADMIN_API_KEY=a0b5441108f85e0e61d7f63ae3ae310dd06615bf6703154949a075d07963e9de
+    volumes:
+      - holder-wallet:/home/indy/.indy_client/wallet
+    
     command: >
       start
+        --label "HolderWallet"
         --endpoint http://holder:8030
-        --label HolderWallet
         --inbound-transport http 0.0.0.0 8030
         --outbound-transport http
         --admin 0.0.0.0 8031
-        --admin-insecure-mode
+        --admin-api-key a0b5441108f85e0e61d7f63ae3ae310dd06615bf6703154949a075d07963e9de
         --wallet-type askar
-        --wallet-name holder.agent420695
-        --wallet-key holder.agent420695
+        --wallet-name holder.agent
+        --wallet-key a0b5441108f85e0e61d7f63ae3ae310dd06615bf6703154949a075d07963e9de
         --wallet-allow-insecure-seed
         --preserve-exchange-records
         --auto-provision
         --genesis-url http://webserver:8000/genesis
         --webhook-url http://192.168.15.20:8000/webhook
-        --log-level INFO
+        --log-level DEBUG
         --debug-connections
         --auto-accept-invites
         --auto-accept-requests
+    
+    healthcheck:
+      test: >
+        curl -f -H "X-API-Key: a0b5441108f85e0e61d7f63ae3ae310dd06615bf6703154949a075d07963e9de"
+        http://localhost:8031/status
+        || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
-  # create Public DID for Issuer - Usado para que os usuários da entidade Issuer possam fazer cadastro de schemas na ledger
-
-  ledger-bootstrap-issuer:
-    image: appropriate/curl
-    entrypoint: >
-      sh -c "
-        curl -X POST http://webserver:8000/register -H 'Content-Type: application/json' -d '{\"seed\":\"000000000000000000000000Issuer01\",\"role\":\"TRUST_ANCHOR\"}';
-      "
-    networks:
-    - von
-    restart: "no"
-
-  # Issuer Agent
+  ## ISSUER ##
   issuer:
     image: ghcr.io/openwallet-foundation/acapy-agent:py3.12-1.3.0
-    depends_on:
-      - ledger-bootstrap-issuer
     container_name: ssi-issuer
     ports:
-      - "8040:8040"  # Inbound transport
-      - "8041:8041"  # Admin API
-    environment:
-      - LEDGER_URL=http://webserver:8000
+      - "8040:8040"
+      - "8041:8041"
     networks:
       - von
+    environment:
+      - LEDGER_URL=http://webserver:8000
+      - ACAPY_ADMIN_API_KEY=a2c7e16d44782151b7341e490b4ca9ca7ed920e1b305e4b2d942648e8b2f9335
+      - GOVERNANCE_API_KEY=ffbe0d09b05b46b442a82199206a8c9df97e513c06f05dd85075003430221fc6
+    volumes:
+      - issuer-wallet:/home/indy/.indy_client/wallet
+
     command: >
       start
+        --label "IssuerWallet"
         --endpoint http://issuer:8040
-        --label IssuerWallet
         --inbound-transport http 0.0.0.0 8040
         --outbound-transport http
         --admin 0.0.0.0 8041
-        --admin-insecure-mode
-        --seed 000000000000000000000000Issuer01
+        --admin-api-key a2c7e16d44782151b7341e490b4ca9ca7ed920e1b305e4b2d942648e8b2f9335
         --public-invites
         --wallet-type askar
-        --wallet-name issuer.agent420695
-        --wallet-key issuer.agent420695
-        --wallet-allow-insecure-seed
+        --wallet-name issuer.agent
+        --wallet-key a2c7e16d44782151b7341e490b4ca9ca7ed920e1b305e4b2d942648e8b2f9335
         --preserve-exchange-records
         --auto-provision
         --genesis-url http://webserver:8000/genesis
-        --log-level INFO
+        --log-level DEBUG
         --debug-connections
         --auto-accept-invites
         --auto-accept-requests
+    
+    healthcheck:
+      test: >
+        curl -f -H "X-API-Key: a2c7e16d44782151b7341e490b4ca9ca7ed920e1b305e4b2d942648e8b2f9335"
+        http://localhost:8041/status
+        || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
-  ledger-bootstrap-issuer-verifier:
-    image: appropriate/curl
-    entrypoint: >
-      sh -c "
-        curl -X POST http://webserver:8000/register -H 'Content-Type: application/json' -d '{\"seed\":\"0000000000000000000000Verifier01\",\"role\":\"TRUST_ANCHOR\"}';
-      "
-    networks:
-    - von
-    restart: "no"
-
-  # Issuer+Verifier Agent
-  issuer-verifier:
+  ## VERIFIER ##
+  verifier:
     image: ghcr.io/openwallet-foundation/acapy-agent:py3.12-1.3.0
     container_name: ssi-issuer-verifier
     ports:
-      - "8050:8050"  # Inbound transport
-      - "8051:8051"  # Admin API
-    environment:
-      - LEDGER_URL=http://webserver:8000
+      - "8050:8050"
+      - "8051:8051"
     networks:
       - von
+    environment:
+      - LEDGER_URL=http://webserver:8000
+      - ACAPY_ADMIN_API_KEY=1e2ffb118cc0c8317df5190dd079b9380ceb0edc98bd0fb48c8f2dcba733daca
+    volumes:
+      - verifier-wallet:/home/indy/.indy_client/wallet
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: >
         start
-        --endpoint http://issuer-verifier:8050
-        --label IssuerVerifierWallet
+        --label "VerifierWallet"
+        --endpoint http://verifier:8050
         --inbound-transport http 0.0.0.0 8050
         --outbound-transport http
         --admin 0.0.0.0 8051
-        --admin-insecure-mode
-        --seed 0000000000000000000000Verifier01
+        --admin-api-key 1e2ffb118cc0c8317df5190dd079b9380ceb0edc98bd0fb48c8f2dcba733daca
         --public-invites
         --wallet-type askar
-        --wallet-name issuer-verifier.agent420695
-        --wallet-key issuer-verifier.agent420695
-        --wallet-allow-insecure-seed
+        --wallet-name verifier.agent
+        --wallet-key 1e2ffb118cc0c8317df5190dd079b9380ceb0edc98bd0fb48c8f2dcba733daca
         --preserve-exchange-records
         --auto-provision
         --genesis-url http://webserver:8000/genesis
-        --log-level INFO
+        --webhook-url http://host.docker.internal:8002/webhook
+        --log-level DEBUG
         --debug-connections
         --auto-accept-invites
         --auto-accept-requests
+
+  ####### MONGODB ########
+  mongodb:
+    build:
+      context: .
+      dockerfile: Dockerfile.mongodb
+    container_name: governance-mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: governance
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - governance-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: governance-mongo-express
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: admin123
+      ME_CONFIG_MONGODB_URL: mongodb://admin:admin123@mongodb:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin123
+    depends_on:
+      - mongodb
+    networks:
+      - governance-network
+
+  ####### APPs ########
+
+  ## GOVERNANCE ##
+  governance-api:
+    build:
+      context: ../clients/governance/server
+      dockerfile: ../../../docker/Dockerfile.fastapi
+    container_name: ssi-governance-api
+    ports:
+      - "${GOVERNANCE_API_PORT:-8000}:8000"
+    networks:
+      - von
+      - governance-network
+    depends_on:
+      - endorser
+    restart: unless-stopped
+
+  governance-painel:
+    build:
+      context: ../clients/governance/painel
+      dockerfile: ../../../docker/Dockerfile.vue3
+      args:
+        - VITE_API_BASE_URL=http://127.0.0.1:${GOVERNANCE_API_PORT:-8000}/api
+        - VITE_APP_NAME=Governance Painel
+        - VITE_APP_VERSION=1.0.0
+    container_name: ssi-governance-painel
+    ports:
+      - "${GOVERNANCE_PAINEL_PORT:-3000}:80"
+    networks:
+      - von
+    depends_on:
+      - governance-api
+    restart: unless-stopped
+
+  ## HOLDER ##
+  holder-api:
+    build:
+      context: ../clients/holder/server
+      dockerfile: ../../../docker/Dockerfile.fastapi
+    container_name: ssi-holder-api
+    ports:
+      - "${HOLDER_API_PORT:-8000}:8000"
+    networks:
+      - von
+    depends_on:
+      - holder
+    restart: unless-stopped
+
+  holder-painel:
+    build:
+      context: ../clients/holder/painel
+      dockerfile: ../../../docker/Dockerfile.vue3
+      args:
+        - VITE_API_BASE_URL=http://127.0.0.1:${HOLDER_API_PORT:-8000}/api
+        - VITE_APP_NAME=Holder Painel
+        - VITE_APP_VERSION=1.0.0
+    container_name: ssi-holder-painel
+    ports:
+      - "${HOLDER_PAINEL_PORT:-3000}:80"
+    networks:
+      - von
+    depends_on:
+      - holder-api
+    restart: unless-stopped
+
+  ## ISSUER ##
+  issuer-api:
+    build:
+      context: ../clients/issuer/server
+      dockerfile: ../../../docker/Dockerfile.fastapi
+    container_name: ssi-issuer-api
+    ports:
+      - "${ISSUER_API_PORT:-8000}:8000"
+    networks:
+      - von
+    depends_on:
+      - issuer
+    restart: unless-stopped
+
+  issuer-painel:
+    build:
+      context: ../clients/issuer/painel
+      dockerfile: ../../../docker/Dockerfile.vue3
+      args:
+        - VITE_API_BASE_URL=http://127.0.0.1:${ISSUER_API_PORT:-8000}/api
+        - VITE_APP_NAME=Issuer Painel
+        - VITE_APP_VERSION=1.0.0
+    container_name: ssi-issuer-painel
+    ports:
+      - "${ISSUER_PAINEL_PORT:-3000}:80"
+    networks:
+      - von
+    depends_on:
+      - issuer-api
+    restart: unless-stopped
+
+  ## VERIFIER ##
+  verifier-api:
+    build:
+      context: ../clients/issuer-verifier/server
+      dockerfile: ../../../docker/Dockerfile.fastapi
+    container_name: ssi-verifier-api
+    ports:
+      - "${VERIFIER_API_PORT:-8000}:8000"
+    networks:
+      - von
+    depends_on:
+      - verifier
+    restart: unless-stopped
+
+  verifier-painel:
+    build:
+      context: ../clients/issuer-verifier/painel
+      dockerfile: ../../../docker/Dockerfile.vue3
+      args:
+        - VITE_API_BASE_URL=http://127.0.0.1:${VERIFIER_API_PORT:-8000}/api
+        - VITE_APP_NAME=Verifier Painel
+        - VITE_APP_VERSION=1.0.0
+    container_name: ssi-verifier-painel
+    ports:
+      - "${VERIFIER_PAINEL_PORT:-3000}:80"
+    networks:
+      - von
+    depends_on:
+      - verifier-api
+    restart: unless-stopped
+
+volumes:
+  endorser-wallet:
+  holder-wallet:
+  issuer-wallet:
+  verifier-wallet:
+  mongodb_data:
+  mongodb_config:
+    driver: local

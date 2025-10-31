@@ -180,7 +180,7 @@
         <form @submit.prevent="submitOffer" class="space-y-6">
           <!-- Connection Selection -->
           <div class="space-y-2">
-            <label class="text-sm font-medium text-white">Conexão (buscar por email)</label>
+            <label class="text-sm font-medium text-white">Conexão (buscar pelo alias da conexão)</label>
             <div class="relative">
               <Input
                 v-model="connectionSearch"

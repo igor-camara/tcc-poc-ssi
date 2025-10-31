@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import axiosInstance from '@/lib/axios'
 import { useAppStore } from './app'
 
@@ -7,6 +7,7 @@ export interface User {
   user_name: string
   user_surname: string
   user_email: string
+  user_did: string
 }
 
 export interface LoginRequest {
@@ -87,7 +88,8 @@ export const useAuthStore = defineStore('auth', () => {
         const userData: User = {
           user_name: apiData.user_name,
           user_surname: apiData.user_surname,
-          user_email: apiData.user_email
+          user_email: apiData.user_email,
+          user_did: apiData.user_did
         }
         
         // Update state first
@@ -98,6 +100,7 @@ export const useAuthStore = defineStore('auth', () => {
         // Then store in localStorage with validation
         try {
           localStorage.setItem('auth_token', authToken)
+          console.log(userData);
           localStorage.setItem('user_data', JSON.stringify(userData))
         } catch (error) {
           throw new Error('Erro ao salvar dados de autenticação')
@@ -128,7 +131,8 @@ export const useAuthStore = defineStore('auth', () => {
         const userData: User = {
           user_name: apiData.user_name,
           user_surname: apiData.user_surname,
-          user_email: apiData.user_email
+          user_email: apiData.user_email,
+          user_did: apiData.user_did
         }
         
         // Update state first
@@ -188,7 +192,8 @@ export const useAuthStore = defineStore('auth', () => {
         const userData: User = {
           user_name: apiData.user_name,
           user_surname: apiData.user_surname,
-          user_email: apiData.user_email
+          user_email: apiData.user_email,
+          user_did: apiData.user_did
         }
         
         user.value = userData
@@ -206,6 +211,10 @@ export const useAuthStore = defineStore('auth', () => {
     return false
   }
 
+  const userEmail = computed(() => user.value?.user_email ?? '')
+  const userDid = computed(() => user.value?.user_did ?? '')
+
+
   // Initialize auth state on store creation
   initializeAuth()
 
@@ -214,6 +223,9 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     token,
     isAuthenticated,
+    //getters
+    userEmail,
+    userDid,
     // Actions
     login,
     register,

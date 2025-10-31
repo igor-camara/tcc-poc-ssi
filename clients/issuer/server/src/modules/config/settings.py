@@ -13,17 +13,25 @@ class Settings:
         self.cors_origins = os.getenv("CORS_ORIGINS", "*").split(",")
 
         self.admin_url = os.getenv("ADMIN_URL", "http://localhost:8041")
-        self.api_key = os.getenv("API_KEY", "mysecretapikey")
+        self.api_key = os.getenv("API_KEY", "a2c7e16d44782151b7341e490b4ca9ca7ed920e1b305e4b2d942648e8b2f9335")
 
-        self.jwt_secret_key = os.getenv("JWT_SECRET_KEY", "myjwtsecretkey")
-        self.jwt_algorithm = os.getenv("JWT_ALGORITHM", "HS256")
-        self.access_token_expire_minutes = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+        self.governance_url = os.getenv("GOVERNANCE_URL", "http://localhost:8003")
+        self._governance_api_key = os.getenv("GOVERNANCE_API_KEY", "")
 
-        BASE_DIR = Path(__file__).resolve().parents[6]
+        BASE_DIR = Path(__file__).resolve()
+        for _ in range(6):
+            if BASE_DIR.parent == BASE_DIR:
+                break
+            BASE_DIR = BASE_DIR.parent
         DB_PATH = BASE_DIR / "db" / "issuer.db"
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
         
         self.database_url = os.getenv("DATABASE_URL", f"sqlite:///{DB_PATH}")
 
-        self.company_name = os.getenv("COMPANY_NAME", "A Grande Federação")
+        self.company_name = os.getenv("COMPANY_NAME", "Emissor SSI")
+
+    @property
+    def governance_api_key(self) -> str:
+        return os.environ.get("GOVERNANCE_API_KEY", self._governance_api_key)
 
 settings = Settings()

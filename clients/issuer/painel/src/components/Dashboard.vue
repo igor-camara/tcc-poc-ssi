@@ -68,6 +68,8 @@
                <CredentialsManager v-else-if="activeMenu === 'my-credentials'" />
                <!-- Issued Credentials Content -->
                <IssuedCredentialsManager v-else-if="activeMenu === 'answer-issue-request'" />
+               <!-- Ledger Key Content -->
+               <LedgerKeyManager v-else-if="activeMenu === 'ledger-key'" />
             </div>
          </main>
       </div>
@@ -81,11 +83,13 @@ import {
   LayoutDashboard, 
   BarChart3, 
   CreditCard, 
+  Key,
   LogOut 
 } from 'lucide-vue-next'
 import ConnectionsManager from './ConnectionsManager.vue'
 import CredentialsManager from './CredentialsManager.vue'
 import IssuedCredentialsManager from './IssuedCredentialsManager.vue'
+import LedgerKeyManager from './LedgerKeyManager.vue'
 import { useAuthStore } from '@/stores'
 
 // Store
@@ -113,6 +117,7 @@ const menuItems = [
   { id: 'my-connections', label: 'Minhas conexões', icon: LayoutDashboard },
   { id: 'my-credentials', label: 'Credenciais', icon: BarChart3 },
   { id: 'answer-issue-request', label: 'Credenciais Emitidas', icon: CreditCard },
+  { id: 'ledger-key', label: 'Chave do Ledger', icon: Key },
 ]
 
 // User data - compatível com ambas as estruturas

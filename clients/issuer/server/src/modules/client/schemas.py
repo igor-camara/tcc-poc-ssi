@@ -10,6 +10,12 @@ logging.basicConfig(
 
 class Base:
     @staticmethod
+    def _get_headers():
+        return {
+            "X-API-Key": settings.api_key
+        }
+    
+    @staticmethod
     def _fields(body: dict, fields: list, result: dict = None):
         if result is None:
             result = {}
@@ -55,7 +61,7 @@ class ClientDid(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=10.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"DID criado com sucesso.")
@@ -82,7 +88,7 @@ class ClientDid(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, params=params, timeout=10.0)
+            response = httpx.post(endpoint, params=params, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 result = self._fields(response.json(), ["success", "created_at", "state"])
@@ -107,13 +113,38 @@ class ClientDid(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.get(endpoint, timeout=10.0)
+            response = httpx.get(endpoint, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"DID público obtido com sucesso.")
                 return self._fields(response.json(), ["did", "verkey", "method"])
             else:
                 logging.error(f"Falha ao obter DID público. Corpo da resposta: {response.text}")
+                return None
+
+        except httpx.RequestError as e:
+            logging.error(f"Erro de conexão com o ACA-Py: {e}")
+            return None
+        except Exception as e:
+            logging.exception(f"Erro inesperado: {e}")
+            return None
+    
+    def set_public_did(self, did: str):
+        endpoint = f"{self.url}/wallet/did/public"
+        params = {
+            "did": did
+        }
+
+        logging.info(f"Enviando requisição para {endpoint} para marcar DID como público")
+
+        try:
+            response = httpx.post(endpoint, params=params, headers=self._get_headers(), timeout=10.0)
+
+            if response.status_code == 200:
+                logging.info(f"DID {did} marcado como público com sucesso.")
+                return self._fields(response.json(), ["did", "verkey", "method", "posture"])
+            else:
+                logging.error(f"Falha ao marcar DID como público. Corpo da resposta: {response.text}")
                 return None
 
         except httpx.RequestError as e:
@@ -132,7 +163,7 @@ class ClientDid(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.get(endpoint, params=params, timeout=10.0)
+            response = httpx.get(endpoint, params=params, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"DID obtido com sucesso.")
@@ -199,7 +230,7 @@ class ClientConnection(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=10.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"Convite criado com sucesso.")
@@ -222,7 +253,7 @@ class ClientConnection(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=10.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"Convite recebido com sucesso.")
@@ -252,9 +283,9 @@ class ClientConnection(Base):
 
         try:
             if params:
-                response = httpx.get(endpoint, params=params, timeout=10.0)
+                response = httpx.get(endpoint, params=params, headers=self._get_headers(), timeout=10.0)
             else:
-                response = httpx.get(endpoint, timeout=10.0)
+                response = httpx.get(endpoint, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"Conexões obtidas com sucesso.")
@@ -307,7 +338,7 @@ class ClientSchemas(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=30.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=30.0)
 
             if response.status_code == 200:
                 logging.info(f"Esquema criado com sucesso.")
@@ -329,7 +360,7 @@ class ClientSchemas(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.get(endpoint, timeout=10.0)
+            response = httpx.get(endpoint, headers=self._get_headers(), timeout=30.0)
 
             if response.status_code == 200:
                 logging.info(f"Esquemas obtidos com sucesso.")
@@ -351,7 +382,7 @@ class ClientSchemas(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.get(endpoint, timeout=10.0)
+            response = httpx.get(endpoint, headers=self._get_headers(), timeout=30.0)
 
             if response.status_code == 200:
                 logging.info(f"Esquema obtido com sucesso.")
@@ -377,7 +408,7 @@ class ClientSchemas(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=30.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=30.0)
 
             if response.status_code == 200:
                 logging.info(f"Definição de credencial criada com sucesso.")
@@ -403,9 +434,9 @@ class ClientSchemas(Base):
 
         try:
             if params:
-                response = httpx.get(endpoint, params=params, timeout=10.0)
+                response = httpx.get(endpoint, params=params, headers=self._get_headers(), timeout=10.0)
             else:
-                response = httpx.get(endpoint, timeout=10.0)
+                response = httpx.get(endpoint, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"Definições de credenciais obtidas com sucesso.")
@@ -427,7 +458,7 @@ class ClientSchemas(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.get(endpoint, timeout=10.0)
+            response = httpx.get(endpoint, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"Definição de credencial obtida com sucesso.")
@@ -460,9 +491,6 @@ class ClientIssue(Base):
         if "cred_def_id" not in props:
             logging.error("Parâmetro obrigatório ausente: 'cred_def_id'")
             return None    
-        #if "credential_preview" not in props:
-        #    logging.error("Parâmetro obrigatório ausente: 'credential_preview'")
-        #    return None
         if "issuer_did" not in props:
             logging.error("Parâmetro obrigatório ausente: 'issuer_did'")
             return None
@@ -476,7 +504,7 @@ class ClientIssue(Base):
             "auto_remove": props["auto_remove"],
             "connection_id": props["connection_id"],
             "credential_preview": {
-                "@type": "issue-credential/2.0/credential-preview",
+                "@type": "https://didcomm.org/issue-credential/2.0/credential-preview",
                 "attributes": props['attributes']
             },
             "filter": {
@@ -493,7 +521,7 @@ class ClientIssue(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=10.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 return self._fields(response.json(), ["cred_ex_id", "connection_id", "created_at", "updated_at", "state"])
@@ -517,7 +545,7 @@ class ClientIssue(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=10.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"Pedido de credencial enviado com sucesso.")
@@ -534,12 +562,14 @@ class ClientIssue(Base):
         
     def issue_credential(self, cred_ex_id: str):
         endpoint = f"{self.url}/issue-credential-2.0/records/{cred_ex_id}/issue"
-        body = {}
+        body = {
+            "comment": f"Credencial emitida por {settings.company_name}"
+        }
 
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=10.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
             response.raise_for_status()
 
             if response.status_code == 200:
@@ -562,7 +592,7 @@ class ClientIssue(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=10.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"Credencial armazenada com sucesso.")
@@ -585,7 +615,7 @@ class ClientIssue(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.get(endpoint, timeout=10.0)
+            response = httpx.get(endpoint, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"Ofertas de credenciais obtidas com sucesso.")
@@ -654,7 +684,7 @@ class ClientVerify(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=10.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
             response.raise_for_status()
             logging.info(f"Pedido de prova enviado com sucesso.")
             return self._fields(response.json(), ["pres_ex_id", "connection_id", "created_at", "updated_at", "state"])
@@ -692,7 +722,7 @@ class ClientVerify(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=10.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
             response.raise_for_status()
             logging.info(f"Prova enviada com sucesso.")
             return self._fields(response.json(), ["pres_ex_id", "connection_id", "created_at", "updated_at", "state"])
@@ -712,7 +742,7 @@ class ClientVerify(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.get(endpoint, timeout=10.0)
+            response = httpx.get(endpoint, headers=self._get_headers(), timeout=10.0)
             response.raise_for_status()
             logging.info(f"Prova obtida com sucesso.")
             return self._fields(response.json(), ["pres_ex_id", "connection_id", "created_at", "updated_at", "state", "verified"])

@@ -12,16 +12,13 @@ class User:
     """User model for authentication"""
     
     def __init__(self, email=None, password=None, first_name=None, last_name=None, 
-                 id=None, did=None, verkey=None, 
-                 is_active=True, created_at=None, updated_at=None):
+                 id=None, is_active=True, created_at=None, updated_at=None):
         self.id = id or str(uuid.uuid4())
         self.email = email.lower() if email else None
         self.password_hash = None
         self.first_name = first_name
         self.last_name = last_name
         self.is_active = is_active
-        self.did = did
-        self.verkey = verkey
         self.created_at = created_at or datetime.utcnow()
         self.updated_at = updated_at or datetime.utcnow()
         
@@ -48,14 +45,11 @@ class User:
                 first_name TEXT,
                 last_name TEXT,
                 is_active INTEGER DEFAULT 1,
-                did TEXT UNIQUE,
-                verkey TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
         ''')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)')
-        conn.execute('CREATE INDEX IF NOT EXISTS idx_users_did ON users(did)')
         conn.commit()
         conn.close()
     
@@ -78,8 +72,6 @@ class User:
             'first_name': self.first_name,
             'last_name': self.last_name,
             'is_active': self.is_active,
-            'did': self.did,
-            'verkey': self.verkey,
             'created_at': self.created_at.isoformat() if isinstance(self.created_at, datetime) else self.created_at,
             'updated_at': self.updated_at.isoformat() if isinstance(self.updated_at, datetime) else self.updated_at
         }
@@ -120,8 +112,6 @@ class User:
             first_name=row['first_name'],
             last_name=row['last_name'],
             is_active=bool(row['is_active']),
-            did=row['did'],
-            verkey=row['verkey'],
             created_at=created_at,
             updated_at=updated_at
         )
@@ -144,22 +134,21 @@ class User:
                 conn.execute('''
                     UPDATE users SET 
                         email = ?, password_hash = ?, first_name = ?, last_name = ?,
-                        is_active = ?, did = ?, verkey = ?, updated_at = ?
+                        is_active = ?, updated_at = ?
                     WHERE id = ?
                 ''', (
                     self.email, self.password_hash, self.first_name, self.last_name,
-                    int(self.is_active), self.did, self.verkey, self.updated_at.isoformat(), self.id
+                    int(self.is_active), self.updated_at.isoformat(), self.id
                 ))
             else:
                 # Insert
                 conn.execute('''
                     INSERT INTO users 
-                    (id, email, password_hash, first_name, last_name, is_active, 
-                     did, verkey, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (id, email, password_hash, first_name, last_name, is_active, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     self.id, self.email, self.password_hash, self.first_name, self.last_name,
-                    int(self.is_active), self.did, self.verkey, self.created_at.isoformat(), self.updated_at.isoformat()
+                    int(self.is_active), self.created_at.isoformat(), self.updated_at.isoformat()
                 ))
             
             conn.commit()

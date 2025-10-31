@@ -1,5 +1,6 @@
 import httpx
 import logging
+from modules.config.settings import settings
 
 logging.basicConfig(
     level=logging.INFO,
@@ -7,6 +8,12 @@ logging.basicConfig(
 )
 
 class Base:
+    @staticmethod
+    def _get_headers():
+        return {
+            "X-API-Key": settings.api_key
+        }
+    
     @staticmethod
     def _fields(body: dict, fields: list, result: dict = None):
         if result is None:
@@ -53,7 +60,7 @@ class ClientDid(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=10.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"DID criado com sucesso.")
@@ -80,7 +87,7 @@ class ClientDid(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, params=params, timeout=10.0)
+            response = httpx.post(endpoint, params=params, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 result = self._fields(response.json(), ["success", "created_at", "state"])
@@ -105,7 +112,7 @@ class ClientDid(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.get(endpoint, timeout=10.0)
+            response = httpx.get(endpoint, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"DID público obtido com sucesso.")
@@ -130,7 +137,7 @@ class ClientDid(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.get(endpoint, params=params, timeout=10.0)
+            response = httpx.get(endpoint, params=params, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"DID obtido com sucesso.")
@@ -192,7 +199,7 @@ class ClientConnection(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=10.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"Convite criado com sucesso.")
@@ -208,14 +215,16 @@ class ClientConnection(Base):
             logging.exception(f"Erro inesperado: {e}")
             return None
         
-    def receive(self, invitation_url: dict):
+    def receive(self, alias: str, invitation_url: dict):
         endpoint = f"{self.url}/out-of-band/receive-invitation"
         body = self._from_oob(invitation_url)
 
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=10.0)
+            print("==== Convite recebido ====")
+            print(body)
+            response = httpx.post(endpoint, json=body, params={"alias": alias}, headers=self._get_headers(), timeout=30.0)
 
             if response.status_code == 200:
                 logging.info(f"Convite recebido com sucesso.")
@@ -231,13 +240,15 @@ class ClientConnection(Base):
             logging.exception(f"Erro inesperado: {e}")
             return None
         
-    def get_connections(self, id: str = None, alias : str = None):
+    def get_connections(self, id: str = None, alias : str = None, invitation_msg_id: str = None):
         endpoint = f"{self.url}/connections"
         params = {}
         if alias and id:
             return None
         if alias:
             params["alias"] = alias
+        if invitation_msg_id:
+            params["invitation_msg_id"] = invitation_msg_id
         if id:
             endpoint += f"/{id}"
 
@@ -245,13 +256,24 @@ class ClientConnection(Base):
 
         try:
             if params:
-                response = httpx.get(endpoint, params=params, timeout=10.0)
+                response = httpx.get(endpoint, params=params, headers=self._get_headers(), timeout=10.0)
             else:
-                response = httpx.get(endpoint, timeout=10.0)
+                response = httpx.get(endpoint, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"Conexões obtidas com sucesso.")
-                return self._fields(response.json(), ["state", "created_at", "updated_at", "connection_id", "my_did", "their_did", "their_label", "invitation_key", "alias", "company_name", "public_did"])
+                return self._fields(response.json(), [
+                    "state", 
+                    "created_at", 
+                    "updated_at", 
+                    "connection_id", 
+                    "my_did", 
+                    "their_did", 
+                    "their_label", 
+                    "invitation_key", 
+                    "alias",
+                    "their_public_did"
+                ])
             else:
                 logging.error(f"Falha ao obter conexões. Corpo da resposta: {response.text}")
                 return None
@@ -300,7 +322,7 @@ class ClientSchemas(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=10.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"Esquema criado com sucesso.")
@@ -322,7 +344,7 @@ class ClientSchemas(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.get(endpoint, timeout=10.0)
+            response = httpx.get(endpoint, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"Esquemas obtidos com sucesso.")
@@ -344,7 +366,7 @@ class ClientSchemas(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.get(endpoint, timeout=10.0)
+            response = httpx.get(endpoint, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"Esquema obtido com sucesso.")
@@ -370,7 +392,7 @@ class ClientSchemas(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=30.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=30.0)
 
             if response.status_code == 200:
                 logging.info(f"Definição de credencial criada com sucesso.")
@@ -396,9 +418,9 @@ class ClientSchemas(Base):
 
         try:
             if params:
-                response = httpx.get(endpoint, params=params, timeout=10.0)
+                response = httpx.get(endpoint, params=params, headers=self._get_headers(), timeout=10.0)
             else:
-                response = httpx.get(endpoint, timeout=10.0)
+                response = httpx.get(endpoint, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"Definições de credenciais obtidas com sucesso.")
@@ -420,7 +442,7 @@ class ClientSchemas(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.get(endpoint, timeout=10.0)
+            response = httpx.get(endpoint, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"Definição de credencial obtida com sucesso.")
@@ -486,7 +508,7 @@ class ClientIssue(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=10.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 return self._fields(response.json(), ["cred_ex_id", "connection_id", "created_at", "updated_at", "state"])
@@ -509,7 +531,7 @@ class ClientIssue(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=10.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"Pedido de credencial enviado com sucesso.")
@@ -531,7 +553,7 @@ class ClientIssue(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=10.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"Credencial emitida com sucesso.")
@@ -553,7 +575,7 @@ class ClientIssue(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=10.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"Credencial armazenada com sucesso.")
@@ -576,7 +598,7 @@ class ClientIssue(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.get(endpoint, timeout=10.0)
+            response = httpx.get(endpoint, headers=self._get_headers(), timeout=10.0)
 
             if response.status_code == 200:
                 logging.info(f"Ofertas de credenciais obtidas com sucesso.")
@@ -591,7 +613,8 @@ class ClientIssue(Base):
                     "schema_id",
                     "cred_def_id",
                     "schema_name",
-                    "schema_version"
+                    "schema_version",
+                    "credential_preview"
                 ])
             else:
                 logging.error(f"Falha ao obter ofertas de credenciais. Corpo da resposta: {response.text}")
@@ -609,7 +632,7 @@ class ClientIssue(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.get(endpoint, timeout=10.0)
+            response = httpx.get(endpoint, headers=self._get_headers(), timeout=30.0)
             response.raise_for_status()
 
             if response.status_code == 200:
@@ -673,7 +696,7 @@ class ClientVerify(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=10.0)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
             response.raise_for_status()
             logging.info(f"Pedido de prova enviado com sucesso.")
             return self._fields(response.json(), ["pres_ex_id", "connection_id", "created_at", "updated_at", "state"])
@@ -711,7 +734,8 @@ class ClientVerify(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.post(endpoint, json=body, timeout=10.0)
+            print(body)
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
             response.raise_for_status()
             logging.info(f"Prova enviada com sucesso.")
             return self._fields(response.json(), ["pres_ex_id", "connection_id", "created_at", "updated_at", "state"])
@@ -731,12 +755,63 @@ class ClientVerify(Base):
         logging.info(f"Enviando requisição para {endpoint}")
 
         try:
-            response = httpx.get(endpoint, timeout=10.0)
+            response = httpx.get(endpoint, headers=self._get_headers(), timeout=10.0)
             response.raise_for_status()
             logging.info(f"Prova obtida com sucesso.")
             return self._fields(response.json(), ["pres_ex_id", "connection_id", "created_at", "updated_at", "state", "verified"])
         except httpx.HTTPStatusError as e:
             logging.error(f"Falha ao obter prova. Corpo da resposta: {e.response.text}")
+            return None
+        except httpx.RequestError as e:
+            logging.error(f"Erro de conexão com o ACA-Py: {e}")
+            return None
+        except Exception as e:
+            logging.exception(f"Erro inesperado: {e}")
+            return None
+    
+    def get_credentials_for_proof_request(self, pres_ex_id: str, count: int = 10, start: int = 0):
+        endpoint = f"{self.url}/present-proof-2.0/records/{pres_ex_id}/credentials"
+        params = {
+            "count": count,
+            "start": start
+        }
+
+        logging.info(f"Enviando requisição para {endpoint}")
+
+        try:
+            response = httpx.get(endpoint, params=params, headers=self._get_headers(), timeout=10.0)
+            response.raise_for_status()
+            logging.info(f"Credenciais para proof request obtidas com sucesso.")
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            logging.error(f"Falha ao obter credenciais. Corpo da resposta: {e.response.text}")
+            return None
+        except httpx.RequestError as e:
+            logging.error(f"Erro de conexão com o ACA-Py: {e}")
+            return None
+        except Exception as e:
+            logging.exception(f"Erro inesperado: {e}")
+            return None
+    
+    def get_proof_records(self, descending: bool = False, limit: int = 100, offset: int = 0, order_by: str = "id"):
+        """Get proof records from ACA-Py"""
+        endpoint = f"{self.url}/present-proof-2.0/records"
+        params = {
+            "descending": str(descending).lower(),
+            "limit": limit,
+            "offset": offset,
+            "order_by": order_by
+        }
+
+        logging.info(f"Enviando requisição para {endpoint}")
+
+        try:
+            response = httpx.get(endpoint, params=params, headers=self._get_headers(), timeout=10.0)
+            response.raise_for_status()
+            logging.info(f"Proof records obtidos com sucesso.")
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            logging.error(f"Falha ao obter proof records. Corpo da resposta: {e.response.text}")
             return None
         except httpx.RequestError as e:
             logging.error(f"Erro de conexão com o ACA-Py: {e}")

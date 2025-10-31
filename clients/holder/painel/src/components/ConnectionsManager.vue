@@ -122,23 +122,14 @@
                      </div>
                   </div>
                   <!-- Actions -->
-                  <div class="flex items-center space-x-2">
-                     <Button
-                        @click="viewDidDocument(connection)"
-                        variant="ghost"
-                        size="sm"
-                        class="text-purple-200 hover:text-white hover:bg-white/10 cursor-pointer"
-                        title="Ver DID Document"
-                        >
-                        <FileText class="w-4 h-4" />
-                     </Button>
+                  <div>
                      <Button
                         @click="viewConnectionDetails(connection)"
                         variant="ghost"
                         size="sm"
                         class="text-purple-200 hover:text-white hover:bg-white/10 cursor-pointer"
                         title="Ver Detalhes"
-                        >
+                     >
                         <Eye class="w-4 h-4" />
                      </Button>
                   </div>
@@ -320,7 +311,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Plus, Network, FileText, Eye, X } from 'lucide-vue-next'
+import { Plus, Network, Eye, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -332,12 +323,13 @@ import {
    SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { useConnectionStore, useInvitationStore, useAppStore } from '@/stores'
+import { useConnectionStore, useInvitationStore, useAppStore, useAuthStore } from '@/stores'
 
 // Stores
 const connectionStore = useConnectionStore()
 const invitationStore = useInvitationStore()
 const appStore = useAppStore()
+const authStore = useAuthStore()
 
 // Reactive data
 const searchTerm = ref('')
@@ -401,19 +393,6 @@ const fetchConnections = () => connectionStore.fetchAll()
 const getStatusClass = (state: string) => connectionStore.getStatusClass(state)
 const getStatusLabel = (state: string) => connectionStore.getStatusLabel(state)
 
-const viewDidDocument = async (connection: any) => {
-  if (!connection.their_did) {
-    appStore.addNotification('DID não disponível para esta conexão', 'error')
-    return
-  }
-  
-  const didDocument = await connectionStore.getDidDocument(connection.their_did)
-  if (didDocument) {
-    selectedDidDocument.value = JSON.stringify(didDocument, null, 2)
-    showDidModal.value = true
-  }
-}
-
 const viewConnectionDetails = (connection: any) => {
   selectedConnection.value = connection
   showDetailsModal.value = true
@@ -427,7 +406,8 @@ const closeDetailsModal = () => {
 const handleAddConnectionByUrl = async () => {
   const result = await invitationStore.receiveByUrl({
     alias: newConnectionForm.value.alias,
-    url: newConnectionForm.value.url
+    url: newConnectionForm.value.url,
+    user_did: authStore.userDid
   })
 
   if (result) {

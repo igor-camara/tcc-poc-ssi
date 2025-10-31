@@ -188,6 +188,24 @@
               <span class="text-white">{{ formatDate(selectedOffer.updated_at) }}</span>
             </div>
           </div>
+
+          <!-- Credential Preview -->
+          <div v-if="selectedOffer.credential_preview?.attributes" class="bg-white/10 rounded-lg p-4">
+            <h4 class="text-purple-300 font-medium mb-3 flex items-center">
+              <Award class="w-4 h-4 mr-2" />
+              Preview da Credencial
+            </h4>
+            <div class="space-y-2">
+              <div
+                v-for="attr in selectedOffer.credential_preview.attributes"
+                :key="attr.name"
+                class="bg-black/20 rounded p-3 flex justify-between items-start"
+              >
+                <span class="text-purple-200 font-medium capitalize">{{ formatAttributeName(attr.name) }}:</span>
+                <span class="text-white font-semibold text-right ml-3">{{ attr.value }}</span>
+              </div>
+            </div>
+          </div>
           
           <div class="bg-white/10 rounded-lg p-4">
             <h4 class="text-purple-300 font-medium mb-2">Exchange ID:</h4>
@@ -437,6 +455,17 @@ function formatDate(dateString: string): string {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date)
+}
+
+function formatAttributeName(name: string): string {
+  // Convert camelCase or snake_case to readable format
+  return name
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/_/g, ' ')
+    .trim()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
 }
 </script>
 

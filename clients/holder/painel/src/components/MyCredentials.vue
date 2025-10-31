@@ -221,10 +221,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useCredentialStore, type Credential } from '@/stores/credential'
 import { useAppStore } from '@/stores/app'
+import { useAuthStore } from '@/stores/auth'
 
 // Stores
 const credentialStore = useCredentialStore()
 const appStore = useAppStore()
+const authStore = useAuthStore()
 
 // State
 const searchTerm = ref('')
@@ -256,7 +258,7 @@ const filteredCredentials = computed(() => {
 
 // Methods
 async function loadCredentials() {
-  await credentialStore.fetchCredentials()
+  await credentialStore.fetchCredentials(authStore.userDid)
 }
 
 function getSchemaName(schemaId: string): string {

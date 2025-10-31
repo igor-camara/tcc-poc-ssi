@@ -22,10 +22,10 @@ async def create_did(alias: str = None) -> dict | str:
         return {
             'did': did_info.get('did'),
             'verkey': did_info.get('verkey'),
-            'metadata': did_info.get('metadata', {}),
             'alias': alias
         }
     except Exception as e:
+        print(e)
         return "DID_CREATION_FAILED"
 
 async def register_did_on_ledger(did, verkey, alias=None) -> bool:

@@ -6,6 +6,7 @@ import { useAppStore } from './app'
 export interface CreateConnectionRequest {
   alias: string
   url: string
+  user_did: string
 }
 
 export interface InvitationResponse {

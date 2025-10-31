@@ -122,16 +122,7 @@
                      </div>
                   </div>
                   <!-- Actions -->
-                  <div class="flex items-center space-x-2">
-                     <Button
-                        @click="viewDidDocument(connection)"
-                        variant="ghost"
-                        size="sm"
-                        class="text-amber-200 hover:text-white hover:bg-white/10 cursor-pointer"
-                        title="Ver DID Document"
-                        >
-                        <FileText class="w-4 h-4" />
-                     </Button>
+                  <div>
                      <Button
                         @click="viewConnectionDetails(connection)"
                         variant="ghost"
@@ -141,15 +132,6 @@
                         >
                         <Eye class="w-4 h-4" />
                      </Button>
-                     <!--<Button
-                        @click="deleteConnection(connection)"
-                        variant="ghost"
-                        size="sm"
-                        class="text-red-300 hover:text-red-200 hover:bg-red-500/20 cursor-pointer"
-                        title="Excluir Conexão"
-                        >
-                        <Trash2 class="w-4 h-4" />
-                     </Button>-->
                   </div>
                </div>
             </div>
@@ -311,7 +293,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Plus, Network, FileText, Eye, X } from 'lucide-vue-next'
+import { Plus, Network, Eye, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -390,19 +372,6 @@ const fetchConnections = () => connectionStore.fetchAll()
 const getStatusClass = (state: string) => connectionStore.getStatusClass(state)
 const getStatusLabel = (state: string) => connectionStore.getStatusLabel(state)
 
-const viewDidDocument = async (connection: any) => {
-  if (!connection.their_did) {
-    appStore.addNotification('DID não disponível para esta conexão', 'error')
-    return
-  }
-  
-  const didDocument = await connectionStore.getDidDocument(connection.their_did)
-  if (didDocument) {
-    selectedDidDocument.value = JSON.stringify(didDocument, null, 2)
-    showDidModal.value = true
-  }
-}
-
 const viewConnectionDetails = (connection: any) => {
   selectedConnection.value = connection
   showDetailsModal.value = true
@@ -412,16 +381,6 @@ const closeDetailsModal = () => {
   showDetailsModal.value = false
   selectedConnection.value = null
 }
-
-//const deleteConnection = async (connection: any) => {
-//  if (confirm(`Tem certeza que deseja excluir a conexão "${connection.alias}"?`)) {
-//    const success = await connectionStore.deleteConnection(connection.connection_id)
-//    if (success) {
-//      // Recarregar lista após exclusão
-//      await fetchConnections()
-//    }
-//  }
-//}
 
 const handleGenerateUrl = async () => {
   const result = await invitationStore.create(generateUrlForm.value.alias)

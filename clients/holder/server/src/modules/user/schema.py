@@ -9,8 +9,6 @@ from modules.config.settings import settings
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class User:
-    """User model for authentication"""
-    
     def __init__(self, email=None, password=None, first_name=None, last_name=None, 
                  id=None, did=None, verkey=None, 
                  is_active=True, created_at=None, updated_at=None):
@@ -56,6 +54,17 @@ class User:
         ''')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_users_did ON users(did)')
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS user_ephemeral_dids (
+                id TEXT PRIMARY KEY,
+                user_did TEXT NOT NULL,
+                ephemeral_did TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(user_did) REFERENCES users(did)
+            )
+        ''')
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_user_ephemeral_dids_user_did ON user_ephemeral_dids(user_did)')
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_user_ephemeral_dids_ephemeral_did ON user_ephemeral_dids(ephemeral_did)')
         conn.commit()
         conn.close()
     
@@ -87,11 +96,9 @@ class User:
     @classmethod
     def find_by_email(cls, email):
         """Find user by email"""
-        print(email)
         conn = cls._get_db_connection()
         row = conn.execute('SELECT * FROM users WHERE email = ?', (email.lower(),)).fetchone()
         conn.close()
-        print(row)
         if row:
             return cls._from_row(row)
         return None
@@ -101,6 +108,17 @@ class User:
         """Find user by ID"""
         conn = cls._get_db_connection()
         row = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
+        conn.close()
+        
+        if row:
+            return cls._from_row(row)
+        return None
+    
+    @classmethod
+    def find_by_did(cls, user_did):
+        """Find user by DID"""
+        conn = cls._get_db_connection()
+        row = conn.execute('SELECT * FROM users WHERE did = ?', (user_did,)).fetchone()
         conn.close()
         
         if row:
@@ -168,5 +186,37 @@ class User:
         except Exception as e:
             conn.rollback()
             raise e
+        finally:
+            conn.close()
+
+    @staticmethod
+    def add_ephemeral_did(user_did, ephemeral_did):
+        conn = User._get_db_connection()
+        try:
+            conn.execute('''
+                INSERT INTO user_ephemeral_dids (id, user_did, ephemeral_did, created_at)
+                VALUES (?, ?, ?, ?)
+            ''', (
+                str(uuid.uuid4()),
+                user_did,
+                ephemeral_did,
+                datetime.utcnow().isoformat()
+            ))
+            conn.commit()
+            return True
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            conn.close()
+
+    @staticmethod
+    def get_ephemeral_dids_by_user_did(user_did):
+        conn = User._get_db_connection()
+        try:
+            rows = conn.execute('''
+                SELECT ephemeral_did, created_at FROM user_ephemeral_dids WHERE user_did = ?
+            ''', (user_did,)).fetchall()
+            return [dict(ephemeral_did=row['ephemeral_did'], created_at=row['created_at']) for row in rows]
         finally:
             conn.close()

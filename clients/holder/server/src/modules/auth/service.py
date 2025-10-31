@@ -2,15 +2,15 @@ import modules.user.service as user_service
 from modules.auth.schema import AuthRegisterRequest, AuthLoginRequest
 from modules.utils.token import create_access_token
 from modules.utils.password import verify_password
-from modules.utils.ssi import create_did
+from modules.invitation.service import create_did
 
-async def register_user(credentials: AuthRegisterRequest) -> tuple[dict, dict] | str:
+def register_user(credentials: AuthRegisterRequest) -> tuple[dict, dict] | str:
     existing_user = user_service.get_user_by_email(credentials.email)
     if existing_user:
         return "USER_ALREADY_EXISTS"
 
     try:
-        did_info = await create_did(credentials.email)
+        did_info = create_did(credentials.email)
     except Exception as e:
         print(e)
         return "DID_CREATION_FAILED"
@@ -23,13 +23,9 @@ async def register_user(credentials: AuthRegisterRequest) -> tuple[dict, dict] |
         verkey=did_info['verkey']
     )
 
-    access_token = create_access_token(data={"sub": user.id})
+    response = { "user_name": user.first_name, "user_surname": user.last_name, "user_email": user.email, "user_did": user.did }
 
-    response = { "user_name": user.first_name, "user_surname": user.last_name, "user_email": user.email }
-
-    auth_headers = { "token": access_token, "did": user.did, "verkey": user.verkey }
-
-    return response, auth_headers
+    return response
 
 def login_user(credentials: AuthLoginRequest) -> tuple[dict, dict] | str:
     user = user_service.get_user_by_email(credentials.email)
@@ -40,10 +36,8 @@ def login_user(credentials: AuthLoginRequest) -> tuple[dict, dict] | str:
     if not verify_password(credentials.password, user.password_hash):
         return "INVALID_PASSWORD"
 
-    access_token = create_access_token(data={"sub": user.id})
+    #access_token = create_access_token(data={"sub": user.id})
 
-    response = { "user_name": user.first_name, "user_surname": user.last_name, "user_email": user.email }
+    response = { "user_name": user.first_name, "user_surname": user.last_name, "user_email": user.email, "user_did": user.did }
 
-    auth_headers = { "Authorization": access_token, "x-did": user.did, "x-verkey": user.verkey }
-
-    return response, auth_headers
+    return response
