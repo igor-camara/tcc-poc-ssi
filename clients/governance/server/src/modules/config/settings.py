@@ -20,7 +20,7 @@ else:
 
 class Settings:
     def __init__(self):
-        self.host = os.getenv("HOST", "127.0.0.1")
+        self.host = os.getenv("HOST", "0.0.0.0")
         self.port = int(os.getenv("PORT", 8003))
         self.debug = os.getenv("DEBUG", "true").lower() == "true"
 

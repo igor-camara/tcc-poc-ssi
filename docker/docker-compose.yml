@@ -31,7 +31,7 @@ services:
       ledger-bootstrap-endorser:
         condition: service_completed_successfully
     ports:
-      - "127.0.0.1:8021:8021"
+      - "8021:8021"
     networks:
       - von
     environment:
@@ -62,7 +62,7 @@ services:
     healthcheck:
       test: >
         curl -f -H "X-API-Key: ffbe0d09b05b46b442a82199206a8c9df97e513c06f05dd85075003430221fc6"
-        http://localhost:8021/status
+        http://endorser:8021/status
         || exit 1
       interval: 30s
       timeout: 10s
@@ -99,7 +99,7 @@ services:
         --preserve-exchange-records
         --auto-provision
         --genesis-url http://webserver:8000/genesis
-        --webhook-url http://192.168.15.20:8000/webhook
+        --webhook-url http://holder-api:8000/webhook
         --log-level DEBUG
         --debug-connections
         --auto-accept-invites
@@ -127,7 +127,6 @@ services:
     environment:
       - LEDGER_URL=http://webserver:8000
       - ACAPY_ADMIN_API_KEY=a2c7e16d44782151b7341e490b4ca9ca7ed920e1b305e4b2d942648e8b2f9335
-      - GOVERNANCE_API_KEY=ffbe0d09b05b46b442a82199206a8c9df97e513c06f05dd85075003430221fc6
     volumes:
       - issuer-wallet:/home/indy/.indy_client/wallet
 
@@ -175,8 +174,6 @@ services:
       - ACAPY_ADMIN_API_KEY=1e2ffb118cc0c8317df5190dd079b9380ceb0edc98bd0fb48c8f2dcba733daca
     volumes:
       - verifier-wallet:/home/indy/.indy_client/wallet
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     command: >
         start
         --label "VerifierWallet"
@@ -204,7 +201,6 @@ services:
       context: .
       dockerfile: Dockerfile.mongodb
     container_name: governance-mongodb
-    restart: always
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: admin123
@@ -226,7 +222,6 @@ services:
   mongo-express:
     image: mongo-express:latest
     container_name: governance-mongo-express
-    restart: always
     ports:
       - "8081:8081"
     environment:
@@ -248,8 +243,11 @@ services:
       context: ../clients/governance/server
       dockerfile: ../../../docker/Dockerfile.fastapi
     container_name: ssi-governance-api
+    environment:
+      - MONGODB_HOST=mongodb
+      - ADMIN_URL=http://endorser:8021
     ports:
-      - "${GOVERNANCE_API_PORT:-8000}:8000"
+      - "8003:8003"
     networks:
       - von
       - governance-network
@@ -262,12 +260,12 @@ services:
       context: ../clients/governance/painel
       dockerfile: ../../../docker/Dockerfile.vue3
       args:
-        - VITE_API_BASE_URL=http://127.0.0.1:${GOVERNANCE_API_PORT:-8000}/api
+        - VITE_API_BASE_URL=http://localhost:8003/api
         - VITE_APP_NAME=Governance Painel
         - VITE_APP_VERSION=1.0.0
     container_name: ssi-governance-painel
     ports:
-      - "${GOVERNANCE_PAINEL_PORT:-3000}:80"
+      - "3003:80"
     networks:
       - von
     depends_on:
@@ -280,8 +278,10 @@ services:
       context: ../clients/holder/server
       dockerfile: ../../../docker/Dockerfile.fastapi
     container_name: ssi-holder-api
+    environment:
+      - ADMIN_URL=http://holder:8031
     ports:
-      - "${HOLDER_API_PORT:-8000}:8000"
+      - "8000:8000"
     networks:
       - von
     depends_on:
@@ -293,12 +293,12 @@ services:
       context: ../clients/holder/painel
       dockerfile: ../../../docker/Dockerfile.vue3
       args:
-        - VITE_API_BASE_URL=http://127.0.0.1:${HOLDER_API_PORT:-8000}/api
+        - VITE_API_BASE_URL=http://localhost:8000/api
         - VITE_APP_NAME=Holder Painel
         - VITE_APP_VERSION=1.0.0
     container_name: ssi-holder-painel
     ports:
-      - "${HOLDER_PAINEL_PORT:-3000}:80"
+      - "3000:80"
     networks:
       - von
     depends_on:
@@ -311,8 +311,11 @@ services:
       context: ../clients/issuer/server
       dockerfile: ../../../docker/Dockerfile.fastapi
     container_name: ssi-issuer-api
+    environment:
+      - GOVERNANCE_URL=http://governance-api:8003
+      - ADMIN_URL=http://issuer:8041
     ports:
-      - "${ISSUER_API_PORT:-8000}:8000"
+      - "8001:8001"
     networks:
       - von
     depends_on:
@@ -324,12 +327,12 @@ services:
       context: ../clients/issuer/painel
       dockerfile: ../../../docker/Dockerfile.vue3
       args:
-        - VITE_API_BASE_URL=http://127.0.0.1:${ISSUER_API_PORT:-8000}/api
+        - VITE_API_BASE_URL=http://localhost:8001/api
         - VITE_APP_NAME=Issuer Painel
         - VITE_APP_VERSION=1.0.0
     container_name: ssi-issuer-painel
     ports:
-      - "${ISSUER_PAINEL_PORT:-3000}:80"
+      - "3001:80"
     networks:
       - von
     depends_on:
@@ -342,8 +345,11 @@ services:
       context: ../clients/issuer-verifier/server
       dockerfile: ../../../docker/Dockerfile.fastapi
     container_name: ssi-verifier-api
+    environment:
+      - GOVERNANCE_URL=http://governance-api:8003
+      - ADMIN_URL=http://verifier:8051
     ports:
-      - "${VERIFIER_API_PORT:-8000}:8000"
+      - "8002:8002"
     networks:
       - von
     depends_on:
@@ -355,12 +361,12 @@ services:
       context: ../clients/issuer-verifier/painel
       dockerfile: ../../../docker/Dockerfile.vue3
       args:
-        - VITE_API_BASE_URL=http://127.0.0.1:${VERIFIER_API_PORT:-8000}/api
+        - VITE_API_BASE_URL=http://localhost:8002/api
         - VITE_APP_NAME=Verifier Painel
         - VITE_APP_VERSION=1.0.0
     container_name: ssi-verifier-painel
     ports:
-      - "${VERIFIER_PAINEL_PORT:-3000}:80"
+      - "3002:80"
     networks:
       - von
     depends_on:

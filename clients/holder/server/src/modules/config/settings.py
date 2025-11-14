@@ -12,7 +12,7 @@ class Settings:
 
         self.cors_origins = os.getenv("CORS_ORIGINS", "*").split(",")
 
-        self.admin_url = os.getenv("ADMIN_URL", "http://localhost:8021")
+        self.admin_url = os.getenv("ADMIN_URL", "http://localhost:8031")
         self.api_key = os.getenv("API_KEY", "a0b5441108f85e0e61d7f63ae3ae310dd06615bf6703154949a075d07963e9de")
 
         BASE_DIR = Path(__file__).resolve()

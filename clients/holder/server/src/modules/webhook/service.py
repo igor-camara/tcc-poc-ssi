@@ -20,7 +20,7 @@ def process_issue_credential_v2_0(body: dict):
         raise e
     
 def receive_offer(body: dict):
-    # Extract schema_id and cred_def_id
+    # Extrai identificadores da credencial
     schema_id = None
     cred_def_id = None
     credential_preview = []
@@ -41,7 +41,7 @@ def receive_offer(body: dict):
         if not schema_id and 'cred_issue' in by_format:
             indy_issue = by_format['cred_issue'].get('indy', {})
     
-    # Extract credential preview from payload if available
+    # Extrai o preview do payload
     if 'payload' in body and body['payload']:
         try:
             payload = body['payload']
@@ -55,7 +55,7 @@ def receive_offer(body: dict):
         except (json.JSONDecodeError, KeyError) as e:
             print(f"Erro ao extrair credential_preview do payload: {str(e)}")
     
-    # Save credential offer with preview
+    # Salva oferta da credencial (com dados para preview)
     cred_ex_id = body.get('cred_ex_id')
     if cred_ex_id:
         credential_offer = CredentialOffer(
@@ -67,16 +67,8 @@ def receive_offer(body: dict):
             cred_def_id=cred_def_id
         )
         credential_offer.save()
-    
-    # Save notification
-    notification = Notification(
-        tipo="offer-received",
-        connection_id=body.get('connection_id'),
-    )
-    
-    notification.save()
 
-    return notification.to_dict()
+    return None
 
 def store_credential(body: dict):
     cred_ex_id = body.get('cred_ex_id')
