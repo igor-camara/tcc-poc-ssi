@@ -732,22 +732,33 @@ class ClientVerify(Base):
         }
 
         logging.info(f"Enviando requisição para {endpoint}")
+        print(f"[SEND_PRESENTATION] Body: {body}")
 
         try:
-            print(body)
             response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
             response.raise_for_status()
             logging.info(f"Prova enviada com sucesso.")
+            print(f"[SEND_PRESENTATION] Sucesso: {response.json()}")
             return self._fields(response.json(), ["pres_ex_id", "connection_id", "created_at", "updated_at", "state"])
         except httpx.HTTPStatusError as e:
-            logging.error(f"Falha ao enviar prova. Corpo da resposta: {e.response.text}")
-            return None
+            error_text = e.response.text
+            logging.error(f"Falha ao enviar prova. Status: {e.response.status_code}, Corpo: {error_text}")
+            print(f"[SEND_PRESENTATION] ERRO HTTP {e.response.status_code}: {error_text}")
+            # Tenta extrair a mensagem de erro do JSON retornado
+            try:
+                error_json = e.response.json()
+                error_msg = error_json.get('detail') or error_json.get('message') or error_text
+            except:
+                error_msg = error_text
+            return {"error": error_msg, "status_code": e.response.status_code}
         except httpx.RequestError as e:
             logging.error(f"Erro de conexão com o ACA-Py: {e}")
-            return None
+            print(f"[SEND_PRESENTATION] ERRO DE CONEXÃO: {e}")
+            return {"error": f"Erro de conexão com o ACA-Py: {str(e)}", "status_code": 503}
         except Exception as e:
             logging.exception(f"Erro inesperado: {e}")
-            return None
+            print(f"[SEND_PRESENTATION] ERRO INESPERADO: {e}")
+            return {"error": f"Erro inesperado: {str(e)}", "status_code": 500}
         
     def get_proof(self, pres_ex_id: str):
         endpoint = f"{self.url}/present-proof-2.0/records/{pres_ex_id}"

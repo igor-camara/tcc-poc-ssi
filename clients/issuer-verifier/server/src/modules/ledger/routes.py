@@ -7,8 +7,47 @@ from fastapi import APIRouter, status
 from modules.config.settings import settings
 import httpx
 from fastapi import Request
+from modules.client.service import AcaPyClient
 
 router = APIRouter(prefix="/ledger", tags=["ledger"])
+
+@router.get("/schemas/{schema_id:path}")
+def get_schema_details(schema_id: str):
+    """
+    Obtém os detalhes de um schema específico da ledger
+    
+    Args:
+        schema_id: ID do schema no formato DID:2:nome:versão
+        
+    Returns:
+        Detalhes do schema incluindo atributos (attrNames)
+    """
+    try:
+        schema = AcaPyClient.schemas.get_schema(id=schema_id)
+        
+        if schema:
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content=SuccessResponse(data=schema).model_dump()
+            )
+        
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content=ErrorResponse(
+                code="SCHEMA_NOT_FOUND",
+                data=f"Schema {schema_id} não encontrado"
+            ).model_dump()
+        )
+        
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                code="INTERNAL_SERVER_ERROR",
+                data=str(e)
+            ).model_dump()
+        )
+
 @router.get("/schemas-redirect")
 async def schemas_redirect(request: Request):
     try:

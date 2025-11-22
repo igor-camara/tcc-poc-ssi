@@ -51,18 +51,19 @@ def get_credentials_for_request(pres_ex_id: str):
 async def send_proof_presentation(pres_ex_id: str, request: Request):
     body = await request.json()
     
-    proof_request = get_proof_request_by_id(pres_ex_id)
-    if not proof_request:
+    result = send_presentation(pres_ex_id, body)
+    
+    # Se o resultado contém erro, retorna com detalhes
+    if isinstance(result, dict) and 'error' in result:
         return JSONResponse(
-            status_code=404,
+            status_code=result.get('status_code', 500),
             content=ErrorResponse(
-                code="NOT_FOUND",
-                data=f"Proof request with pres_ex_id {pres_ex_id} not found"
+                code="PRESENTATION_SEND_FAILED",
+                data=result['error']
             ).model_dump()
         )
     
-    result = send_presentation(pres_ex_id, body)
-    
+    # Suporte legado para erro como string
     if isinstance(result, str):
         return JSONResponse(
             status_code=500,

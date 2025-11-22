@@ -75,6 +75,15 @@
                   </span>
                 </div>
                 
+                <!-- Error Message Preview -->
+                <div 
+                  v-if="request.state === 'abandoned' && request.error_msg"
+                  class="mb-2 p-2 bg-red-500/20 border border-red-500/30 rounded flex items-start gap-2"
+                >
+                  <AlertCircle class="w-4 h-4 text-red-300 shrink-0 mt-0.5" />
+                  <p class="text-red-200 text-xs">{{ request.error_msg }}</p>
+                </div>
+                
                 <div class="space-y-1 text-sm text-purple-200">
                   <div class="flex items-center space-x-2">
                     <span class="font-medium">Versão:</span>
@@ -126,9 +135,31 @@
             <div class="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
               <ShieldCheck class="w-6 h-6 text-white" />
             </div>
-            <div>
+            <div class="flex-1">
               <h3 class="text-xl font-bold text-white">{{ selectedRequest.name }}</h3>
               <p class="text-purple-200 text-sm">{{ selectedRequest.version }}</p>
+            </div>
+            <span
+              :class="[
+                'px-3 py-1 rounded-full text-sm font-medium',
+                getStateColor(selectedRequest.state)
+              ]"
+            >
+              {{ getStateLabel(selectedRequest.state) }}
+            </span>
+          </div>
+
+          <!-- Error Message for Abandoned State -->
+          <div 
+            v-if="selectedRequest.state === 'abandoned' && selectedRequest.error_msg"
+            class="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg"
+          >
+            <div class="flex items-start gap-3">
+              <AlertCircle class="w-5 h-5 text-red-300 flex-shrink-0 mt-0.5" />
+              <div class="flex-1">
+                <h4 class="text-red-200 font-semibold mb-1">Erro ao gerar apresentação</h4>
+                <p class="text-red-200/90 text-sm">{{ selectedRequest.error_msg }}</p>
+              </div>
             </div>
           </div>
 
@@ -277,13 +308,29 @@
 
                   <!-- Credential Selection for Predicate -->
                   <div class="mt-4">
-                    <p class="text-purple-200 text-sm mb-2">Selecione a credencial:</p>
+                    <p class="text-purple-200 text-sm mb-2">Selecione a credencial que satisfaz o predicado:</p>
+                    
+                    <!-- Alerta quando não há credenciais válidas -->
+                    <div 
+                      v-if="getMatchingCredentialsForReferent(referent, predConfig.restrictions).length === 0"
+                      class="mb-3 p-3 bg-red-500/20 border border-red-500/30 rounded text-red-200 text-sm flex items-center gap-2"
+                    >
+                      <AlertCircle class="w-4 h-4 flex-shrink-0" />
+                      <div>
+                        <p class="font-semibold">Nenhuma credencial satisfaz este predicado</p>
+                        <p class="text-xs mt-1">O predicado exige: {{ predConfig.name }} {{ predConfig.p_type }} {{ predConfig.p_value }}</p>
+                      </div>
+                    </div>
                     
                     <Select 
                       v-model="predicateSelections[referent]"
                       @update:modelValue="(value) => value && updatePredicateSelection(referent, String(value))"
+                      :disabled="getMatchingCredentialsForReferent(referent, predConfig.restrictions).length === 0"
                     >
-                      <SelectTrigger class="w-full bg-white/20 border-white/30 text-white hover:bg-white/25 focus:ring-purple-600/50">
+                      <SelectTrigger 
+                        class="w-full bg-white/20 border-white/30 text-white hover:bg-white/25 focus:ring-purple-600/50"
+                        :disabled="getMatchingCredentialsForReferent(referent, predConfig.restrictions).length === 0"
+                      >
                         <SelectValue placeholder="Escolha uma credencial">
                           <template v-if="predicateSelections[referent]">
                             <span class="text-sm">{{ getPredicateCredentialDisplayName(referent) }}</span>
@@ -390,7 +437,7 @@ const canSubmitProof = computed(() => {
     if (!attrConfig) return false
     const attrNames = attrConfig.names || (attrConfig.name ? [attrConfig.name] : [])
     
-    return attrNames.every(attrName => {
+    return attrNames.every((attrName: string) => {
       const selection = attributeSelections.value[referent]?.[attrName]
       return selection?.credentialReferent && selection?.value
     })
@@ -410,7 +457,10 @@ function getGroupRevealed(referent: string): boolean {
   const selections = attributeSelections.value[referent]
   if (!selections) return true
   // Se todos são true, retorna true, senão false
-  return Object.values(selections).every(sel => sel.revealed)
+  for (const key in selections) {
+    if (selections[key] && !selections[key].revealed) return false
+  }
+  return true
 }
 
 function setGroupRevealed(referent: string, revealed: boolean) {
@@ -474,7 +524,7 @@ function getAvailableValuesForAttribute(
   const allCredentials = proofStore.availableCredentials[selectedRequest.value.pres_ex_id] || []
   
   // Filtra credenciais que têm o atributo solicitado e satisfazem as restrições
-  const matchingCreds = allCredentials.filter(cred => {
+  const matchingCreds = allCredentials.filter((cred: AvailableCredential) => {
     // Verifica se tem o atributo
     if (!(attrName in cred.attrs)) return false
     
@@ -484,7 +534,7 @@ function getAvailableValuesForAttribute(
     
     // Verifica restrições
     if (restrictions && restrictions.length > 0) {
-      return restrictions.some(restriction => {
+      return restrictions.some((restriction: Restriction) => {
         if (restriction.schema_id && cred.schema_id !== restriction.schema_id) return false
         if (restriction.cred_def_id && cred.cred_def_id !== restriction.cred_def_id) return false
         return true
@@ -495,7 +545,7 @@ function getAvailableValuesForAttribute(
   })
   
   // Mapeia para o formato de opção
-  return matchingCreds.map(cred => ({
+  return matchingCreds.map((cred: AvailableCredential) => ({
     credReferent: cred.referent,
     value: cred.attrs[attrName] || '',
     schemaName: cred.schema_id.split(':').slice(-2).join(':')
@@ -507,7 +557,7 @@ function selectAttributeValue(referent: string, attrName: string, credReferent: 
   if (!selectedRequest.value) return
   
   const credentials = proofStore.availableCredentials[selectedRequest.value.pres_ex_id] || []
-  const selectedCred = credentials.find(c => c.referent === credReferent)
+  const selectedCred = credentials.find((c: AvailableCredential) => c.referent === credReferent)
   
   if (selectedCred && attrName in selectedCred.attrs) {
     if (!attributeSelections.value[referent]) {
@@ -536,16 +586,34 @@ function getMatchingCredentialsForReferent(
 ): AvailableCredential[] {
   if (!selectedRequest.value) return []
   
-  return proofStore.getMatchingCredentials(
+  let credentials = proofStore.getMatchingCredentials(
     selectedRequest.value.pres_ex_id,
     referent,
     restrictions
   )
+  
+  // Se for um predicado, filtra apenas credenciais que satisfazem o predicado
+  const predConfig = selectedRequest.value.requested_predicates[referent]
+  if (predConfig) {
+    credentials = credentials.filter((cred: AvailableCredential) => 
+      credentialSatisfiesPredicate(
+        cred,
+        predConfig.name,
+        predConfig.p_type,
+        predConfig.p_value
+      )
+    )
+  }
+  
+  return credentials
 }
 
 function formatCredentialLabel(cred: AvailableCredential): string {
   // Tenta criar um label legível com base nos atributos
-  const attrs = Object.entries(cred.attrs)
+  const attrs: string[] = []
+  for (const key in cred.attrs) {
+    attrs.push(`${key}: ${cred.attrs[key]}`)
+  }
   
   if (attrs.length === 0) {
     return cred.referent.substring(0, 8) + '...'
@@ -553,9 +621,7 @@ function formatCredentialLabel(cred: AvailableCredential): string {
   
   // Pega até 3 atributos para não ficar muito longo
   const maxAttrs = 3
-  const displayAttrs = attrs.slice(0, maxAttrs)
-    .map(([key, value]) => `${key}: ${value}`)
-    .join(' | ')
+  const displayAttrs = attrs.slice(0, maxAttrs).join(' | ')
   
   // Se tiver mais atributos, adiciona indicador
   const moreCount = attrs.length - maxAttrs
@@ -566,13 +632,52 @@ function formatCredentialLabel(cred: AvailableCredential): string {
   return displayAttrs
 }
 
+// Função para verificar se uma credencial satisfaz um predicado
+function credentialSatisfiesPredicate(
+  credential: AvailableCredential,
+  predicateName: string,
+  predicateType: string,
+  predicateValue: number
+): boolean {
+  // Verifica se a credencial tem o atributo do predicado
+  if (!(predicateName in credential.attrs)) {
+    return false
+  }
+  
+  const attrValue = credential.attrs[predicateName]
+  if (!attrValue) {
+    return false
+  }
+  
+  // Converte o valor do atributo para número
+  const numValue = parseInt(attrValue)
+  
+  if (isNaN(numValue)) {
+    return false
+  }
+  
+  // Verifica o predicado
+  switch (predicateType) {
+    case '>=':
+      return numValue >= predicateValue
+    case '>':
+      return numValue > predicateValue
+    case '<=':
+      return numValue <= predicateValue
+    case '<':
+      return numValue < predicateValue
+    default:
+      return false
+  }
+}
+
 function getPredicateCredentialDisplayName(referent: string): string {
   if (!selectedRequest.value || !predicateSelections.value[referent]) {
     return ''
   }
   
   const credentials = proofStore.availableCredentials[selectedRequest.value.pres_ex_id] || []
-  const selectedCred = credentials.find(c => c.referent === predicateSelections.value[referent])
+  const selectedCred = credentials.find((c: AvailableCredential) => c.referent === predicateSelections.value[referent])
   
   if (selectedCred) {
     return formatCredentialLabel(selectedCred)
@@ -586,7 +691,13 @@ function updatePredicateSelection(referent: string, credReferent: string) {
 }
 
 async function submitProof() {
-  if (!selectedRequest.value || !canSubmitProof.value) return
+  if (!selectedRequest.value || !canSubmitProof.value) {
+    console.warn('Cannot submit proof:', {
+      hasRequest: !!selectedRequest.value,
+      canSubmit: canSubmitProof.value
+    })
+    return
+  }
 
   const requestedAttributes: Record<string, { cred_id: string; revealed: boolean }> = {}
   const requestedPredicates: Record<string, { cred_id: string; timestamp?: number }> = {}
@@ -597,19 +708,33 @@ async function submitProof() {
     const selections = attributeSelections.value[referent]
     if (!selections || !attrConfig) continue
 
-    // Escolhe a primeira credencial selecionada
-    let firstSelection
-    if (attrConfig.names && Array.isArray(attrConfig.names)) {
-      firstSelection = Object.values(selections).find(sel => sel.credentialReferent)
-    } else {
-      firstSelection = Object.values(selections).find(sel => sel.credentialReferent)
+    const expectedAttrNames = attrConfig.names || (attrConfig.name ? [attrConfig.name] : [])
+    
+    const allSelected = expectedAttrNames.every((attrName: string) => 
+      selections[attrName]?.credentialReferent
+    )
+    
+    if (!allSelected) {
+      console.warn(`Grupo ${referent} não tem todos os atributos selecionados`)
+      continue
     }
 
-    if (firstSelection) {
+    let firstSelection: AttributeSelection | undefined
+    for (const attrName in selections) {
+      if (selections[attrName]?.credentialReferent) {
+        firstSelection = selections[attrName]
+        break
+      }
+    }
+
+    if (firstSelection?.credentialReferent) {
       requestedAttributes[referent] = {
-        cred_id: firstSelection.credentialReferent!,
+        cred_id: firstSelection.credentialReferent,
         revealed: firstSelection.revealed ?? true
       }
+      console.log(`Atributo ${referent} adicionado:`, requestedAttributes[referent])
+    } else {
+      console.error(`Grupo ${referent} não tem credencial selecionada válida!`)
     }
   }
 
@@ -620,8 +745,16 @@ async function submitProof() {
       requestedPredicates[referent] = {
         cred_id: credId
       }
+      console.log(`Predicado ${referent} adicionado:`, requestedPredicates[referent])
+    } else {
+      console.error(`Predicado ${referent} não tem credencial selecionada!`)
     }
   }
+
+  console.log('Enviando apresentação:', {
+    requestedAttributes,
+    requestedPredicates
+  })
 
   const success = await proofStore.sendPresentation({
     pres_ex_id: selectedRequest.value.pres_ex_id,
@@ -637,6 +770,16 @@ async function submitProof() {
   if (success) {
     closeDetailView()
     await loadProofRequests()
+  } else {
+    await loadProofRequests()
+    
+    const updatedRequest = proofStore.proofRequests.find(
+      (pr: ProofRequest) => pr.pres_ex_id === selectedRequest.value?.pres_ex_id
+    )
+    
+    if (updatedRequest) {
+      selectedRequest.value = updatedRequest
+    }
   }
 }
 

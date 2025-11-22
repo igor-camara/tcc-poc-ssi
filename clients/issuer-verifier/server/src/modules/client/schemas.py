@@ -864,6 +864,7 @@ class ClientVerify(Base):
                 "role": proof.get("role"),
                 "initiator": proof.get("initiator"),
                 "verified": proof.get("verified"),
+                "verified_msgs": proof.get("verified_msgs"),
                 "created_at": proof.get("created_at"),
                 "updated_at": proof.get("updated_at")
             }

@@ -317,7 +317,7 @@ class CredentialOffer:
 class PresentProofRequest:
     def __init__(self, pres_ex_id=None, state=None, name=None, version=None, 
                  requested_attributes=None, requested_predicates=None, 
-                 created_at=None, updated_at=None, id=None):
+                 error_msg=None, created_at=None, updated_at=None, id=None):
         self.id = id or str(uuid.uuid4())
         self.pres_ex_id = pres_ex_id
         self.state = state
@@ -325,6 +325,7 @@ class PresentProofRequest:
         self.version = version
         self.requested_attributes = requested_attributes or {}
         self.requested_predicates = requested_predicates or {}
+        self.error_msg = error_msg
         self.created_at = created_at or datetime.utcnow()
         self.updated_at = updated_at or datetime.utcnow()
     
@@ -347,6 +348,7 @@ class PresentProofRequest:
                 version TEXT,
                 requested_attributes TEXT,
                 requested_predicates TEXT,
+                error_msg TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
@@ -369,6 +371,7 @@ class PresentProofRequest:
             'version': self.version,
             'requested_attributes': self.requested_attributes if isinstance(self.requested_attributes, dict) else json.loads(self.requested_attributes) if self.requested_attributes else {},
             'requested_predicates': self.requested_predicates if isinstance(self.requested_predicates, dict) else json.loads(self.requested_predicates) if self.requested_predicates else {},
+            'error_msg': self.error_msg,
             'created_at': self.created_at.isoformat() if isinstance(self.created_at, datetime) else self.created_at,
             'updated_at': self.updated_at.isoformat() if isinstance(self.updated_at, datetime) else self.updated_at
         }
@@ -407,6 +410,13 @@ class PresentProofRequest:
         created_at = datetime.fromisoformat(row['created_at']) if row['created_at'] else datetime.utcnow()
         updated_at = datetime.fromisoformat(row['updated_at']) if row['updated_at'] else datetime.utcnow()
         
+        # Trata error_msg que pode não existir em registros antigos
+        error_msg = None
+        try:
+            error_msg = row['error_msg']
+        except (KeyError, IndexError):
+            pass
+        
         proof_request = cls(
             id=row['id'],
             pres_ex_id=row['pres_ex_id'],
@@ -415,6 +425,7 @@ class PresentProofRequest:
             version=row['version'],
             requested_attributes=json.loads(row['requested_attributes']) if row['requested_attributes'] else {},
             requested_predicates=json.loads(row['requested_predicates']) if row['requested_predicates'] else {},
+            error_msg=error_msg,
             created_at=created_at,
             updated_at=updated_at
         )
@@ -440,24 +451,24 @@ class PresentProofRequest:
                     UPDATE present_proof_requests SET 
                         state = ?, name = ?, version = ?, 
                         requested_attributes = ?, requested_predicates = ?, 
-                        updated_at = ?
+                        error_msg = ?, updated_at = ?
                     WHERE pres_ex_id = ?
                 ''', (
                     self.state, self.name, self.version,
                     requested_attributes_json, requested_predicates_json,
-                    updated_at_str, self.pres_ex_id
+                    self.error_msg, updated_at_str, self.pres_ex_id
                 ))
             else:
                 # Insert
                 conn.execute('''
                     INSERT INTO present_proof_requests 
                     (id, pres_ex_id, state, name, version, requested_attributes, 
-                     requested_predicates, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     requested_predicates, error_msg, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     self.id, self.pres_ex_id, self.state, self.name, self.version,
                     requested_attributes_json, requested_predicates_json,
-                    created_at_str, updated_at_str
+                    self.error_msg, created_at_str, updated_at_str
                 ))
             
             conn.commit()

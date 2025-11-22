@@ -28,7 +28,8 @@ def get_proof_requests() -> List[dict]:
                 "requested_attributes": indy_request.get("requested_attributes", {}),
                 "requested_predicates": indy_request.get("requested_predicates", {}),
                 "created_at": record.get("created_at"),
-                "updated_at": record.get("updated_at")
+                "updated_at": record.get("updated_at"),
+                "error_msg": record.get("error_msg")
             }
             proof_requests.append(proof_request)
         
@@ -85,9 +86,13 @@ def send_presentation(pres_ex_id: str, presentation_data: dict) -> dict | str:
         
         requested_predicates = {}
         for key, value in indy_data.get('requested_predicates', {}).items():
-            requested_predicates[key] = {
+            predicate_data = {
                 'cred_id': value.get('cred_id')
             }
+            if 'timestamp' in value and value['timestamp'] is not None:
+                predicate_data['timestamp'] = value['timestamp']
+            
+            requested_predicates[key] = predicate_data
         
         props = {
             'pres_ex_id': pres_ex_id,
@@ -97,12 +102,21 @@ def send_presentation(pres_ex_id: str, presentation_data: dict) -> dict | str:
             'auto_remove': False
         }
         
+        print(f"Enviando apresentação com props: {props}")
         result = AcaPyClient.verify.send_presentation(props)
+        print(f"Resultado do envio: {result}")
+        
+        if isinstance(result, dict) and 'error' in result:
+            print(f"ERRO: {result['error']}")
+            return result
         
         if not result:
-            return "PRESENTATION_SEND_FAILED"
+            print("ERRO: send_presentation retornou None")
+            return {"error": "Falha ao enviar apresentação: resposta vazia do servidor", "status_code": 500}
         
         return result
     except Exception as e:
-        print(f"Erro ao enviar apresentação: {str(e)}")
-        return "PRESENTATION_SEND_FAILED"
+        print(f"EXCEÇÃO ao enviar apresentação: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {"error": f"Exceção ao enviar apresentação: {str(e)}", "status_code": 500}

@@ -53,6 +53,22 @@ const pageSize = 10
 const hasNextPage = ref(false)
 const loading = ref(false)
 
+async function fetchSchemaDetails(schemaId: string) {
+  try {
+    const response = await fetch(`http://localhost:8002/api/ledger/schemas/${encodeURIComponent(schemaId)}`)
+    if (!response.ok) {
+      console.error('Failed to fetch schema details for', schemaId)
+      return []
+    }
+    const data = await response.json()
+    const schemaData = data.data || data
+    return schemaData.attrNames || []
+  } catch (error) {
+    console.error('Error fetching schema details:', error)
+    return []
+  }
+}
+
 async function fetchSchemas(newPage = 1) {
   loading.value = true
   page.value = newPage
@@ -65,11 +81,21 @@ async function fetchSchemas(newPage = 1) {
     const data = await res.json()
     // Ajuste para o novo formato de resposta
     const items = data.data?.items || []
-    schemas.value = items.map((item: any) => ({
-      id: item.schema_id,
-      name: item.credential_name,
-      raw: item
-    }))
+    
+    // Busca os detalhes de cada schema para obter os atributos
+    const schemasWithDetails = await Promise.all(
+      items.map(async (item: any) => {
+        const attrNames = await fetchSchemaDetails(item.schema_id)
+        return {
+          id: item.schema_id,
+          name: item.credential_name,
+          attrNames: attrNames,
+          raw: item
+        }
+      })
+    )
+    
+    schemas.value = schemasWithDetails
     const totalPages = data.data?.total_pages || 1
     hasNextPage.value = newPage < totalPages
   } catch (e) {

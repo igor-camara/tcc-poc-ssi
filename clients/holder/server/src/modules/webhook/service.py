@@ -92,6 +92,12 @@ def process_present_proof_v2_0(body: dict):
         if body['state'] == 'request-received':
             return receive_proof_request(body)
         
+        if body['state'] == 'abandoned':
+            return update_proof_request_abandoned(body)
+        
+        if body['state'] == 'presentation-sent':
+            return update_proof_request_sent(body)
+        
         return None
         
     except Exception as e:
@@ -134,4 +140,89 @@ def receive_proof_request(body: dict):
     
     notification.save()
     
+    return proof_request.to_dict()
+
+def update_proof_request_abandoned(body: dict):
+    """Atualiza proof request com estado abandoned e mensagem de erro"""
+    pres_ex_id = body.get('pres_ex_id')
+    
+    if not pres_ex_id:
+        print("Erro: pres_ex_id não encontrado no payload")
+        return None
+    
+    # Busca o proof request existente
+    proof_request = PresentProofRequest.find_by_pres_ex_id(pres_ex_id)
+    
+    if not proof_request:
+        # Se não existe, cria um novo registro com os dados do webhook abandoned
+        by_format = body.get('by_format', {})
+        pres_request = by_format.get('pres_request', {})
+        indy_request = pres_request.get('indy', {})
+        
+        proof_request = PresentProofRequest(
+            pres_ex_id=pres_ex_id,
+            state=body.get('state'),
+            name=indy_request.get('name'),
+            version=indy_request.get('version'),
+            requested_attributes=indy_request.get('requested_attributes', {}),
+            requested_predicates=indy_request.get('requested_predicates', {}),
+            error_msg=body.get('error_msg'),
+            created_at=body.get('created_at'),
+            updated_at=body.get('updated_at')
+        )
+        print(f"Criando novo proof request {pres_ex_id} com estado abandoned")
+    else:
+        # Atualiza com o estado abandoned e mensagem de erro
+        proof_request.state = body.get('state')
+        proof_request.error_msg = body.get('error_msg')
+        proof_request.updated_at = body.get('updated_at')
+        print(f"Atualizando proof request {pres_ex_id} para abandoned")
+    
+    proof_request.save()
+    print(f"Proof request {pres_ex_id} marcado como abandoned: {proof_request.error_msg}")
+    
+    # Cria notificação de erro para o holder
+    notification = Notification(
+        tipo="proof-presentation-failed",
+        connection_id=body.get('connection_id'),
+    )
+    notification.save()
+    
+    return proof_request.to_dict()
+
+def update_proof_request_sent(body: dict):
+    """Atualiza proof request com estado presentation-sent"""
+    pres_ex_id = body.get('pres_ex_id')
+    
+    if not pres_ex_id:
+        print("Erro: pres_ex_id não encontrado no payload")
+        return None
+    
+    # Busca o proof request existente
+    proof_request = PresentProofRequest.find_by_pres_ex_id(pres_ex_id)
+    
+    if not proof_request:
+        # Se não existe, cria um novo registro (caso o webhook request-received tenha falhado)
+        by_format = body.get('by_format', {})
+        pres_request = by_format.get('pres_request', {})
+        indy_request = pres_request.get('indy', {})
+        
+        proof_request = PresentProofRequest(
+            pres_ex_id=pres_ex_id,
+            state=body.get('state'),
+            name=indy_request.get('name'),
+            version=indy_request.get('version'),
+            requested_attributes=indy_request.get('requested_attributes', {}),
+            requested_predicates=indy_request.get('requested_predicates', {}),
+            created_at=body.get('created_at'),
+            updated_at=body.get('updated_at')
+        )
+        print(f"Criando novo proof request {pres_ex_id} com estado presentation-sent")
+    else:
+        # Atualiza com o estado presentation-sent
+        proof_request.state = body.get('state')
+        proof_request.updated_at = body.get('updated_at')
+        print(f"Atualizando proof request {pres_ex_id} para presentation-sent")
+    
+    proof_request.save()
     return proof_request.to_dict()

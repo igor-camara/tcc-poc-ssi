@@ -35,6 +35,7 @@ export interface ProofRequest {
   version: string
   requested_attributes: Record<string, RequestedAttribute>
   requested_predicates: Record<string, RequestedPredicate>
+  error_msg?: string
   created_at?: string
   updated_at?: string
 }
@@ -133,7 +134,9 @@ export const useProofStore = defineStore('proof', () => {
 
   async function sendPresentation(request: SendPresentationRequest): Promise<boolean> {
     const result = await appStore.makeApiCall(async () => {
+      console.log('Enviando apresentação:', request)
       const response = await axiosInstance.post(`/proof/requests/${request.pres_ex_id}/send-presentation`, request)
+      console.log('Resposta da apresentação:', response.data)
 
       if (response.data.code === 'SUCCESS') {
         // Remove o pedido de prova da lista após envio bem-sucedido
@@ -150,6 +153,7 @@ export const useProofStore = defineStore('proof', () => {
         appStore.addNotification('Prova enviada com sucesso!', 'success')
         return true
       } else {
+        console.error('Erro na resposta:', response.data)
         throw new Error(response.data.data || 'Erro ao enviar prova')
       }
     })

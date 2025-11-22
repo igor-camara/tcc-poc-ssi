@@ -37,7 +37,7 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function removeNotification(id: string) {
-    const index = notifications.value.findIndex(n => n.id === id)
+    const index = notifications.value.findIndex((n: { id: string; message: string; type: 'success' | 'error' | 'info' | 'warning' }) => n.id === id)
     if (index > -1) {
       notifications.value.splice(index, 1)
     }
@@ -51,7 +51,7 @@ export const useAppStore = defineStore('app', () => {
       return result
     } catch (error: any) {
       const apiError: ApiError = {
-        message: error.response?.data?.message || error.message || 'Erro desconhecido',
+        message: error.response?.data?.data || error.response?.data?.message || error.message || 'Erro desconhecido',
         code: error.response?.data?.code || error.code,
         details: error.response?.data
       }

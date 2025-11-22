@@ -21,6 +21,7 @@ export interface ProofExchange {
   initiator: string
   verified: string | null
   verified_msgs: string[] | null
+  error_msg?: string
   created_at: string
   updated_at: string
   pres_request: {

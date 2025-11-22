@@ -49,139 +49,217 @@
           <Input v-model="form.version" type="text" placeholder="1.0" class="bg-blue-900/40 border border-blue-700 text-white placeholder:text-blue-300 focus:ring-blue-500 max-w-xs" />
         </div>
 
-        <!-- Tabs para Atributos e Predicados -->
-        <Tabs default-value="attributes" class="w-full">
-          <TabsList class="grid w-full grid-cols-2 bg-blue-900/40">
-            <TabsTrigger value="attributes" class="data-[state=active]:bg-blue-700 data-[state=active]:text-white cursor-pointer">
-              Atributos Solicitados
-            </TabsTrigger>
-            <TabsTrigger value="predicates" class="data-[state=active]:bg-blue-700 data-[state=active]:text-white cursor-pointer">
-              Predicados
-            </TabsTrigger>
-          </TabsList>
-
-          <!-- Tab de Atributos -->
-          <TabsContent value="attributes" class="space-y-4 mt-4">
-            <div class="flex justify-between items-center">
-              <p class="text-sm text-blue-200">Defina quais atributos você deseja solicitar do holder</p>
-              <Button type="button" @click="addAttributeKey" size="sm" class="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white">
-                <Plus class="w-4 h-4 mr-1" /> Adicionar Grupo
+        <!-- Lista de Requisitos -->
+        <div class="space-y-4">
+          <div class="flex justify-between items-center">
+            <p class="text-sm text-blue-200">Configure os requisitos da prova</p>
+            <div class="flex gap-2">
+              <Button type="button" @click="addProofItem('attribute')" size="sm" class="bg-indigo-600 hover:bg-indigo-700 cursor-pointer text-white">
+                <Plus class="w-4 h-4 mr-1" /> Atributo
+              </Button>
+              <Button type="button" @click="addProofItem('predicate')" size="sm" class="bg-orange-600 hover:bg-orange-700 cursor-pointer text-white">
+                <Plus class="w-4 h-4 mr-1" /> Predicado
+              </Button>
+              <Button type="button" @click="addProofItem('self_attested')" size="sm" class="bg-teal-600 hover:bg-teal-700 cursor-pointer text-white">
+                <Plus class="w-4 h-4 mr-1" /> Auto-Atestado
               </Button>
             </div>
+          </div>
 
-            <div v-if="form.requested_attributes.length === 0" class="text-center py-8 text-blue-300">
-              Nenhum atributo adicionado. Clique em "Adicionar Grupo" para começar.
-            </div>
+          <div v-if="form.proofItems.length === 0" class="text-center py-12 text-blue-300 bg-blue-900/20 rounded-lg border border-blue-700/30">
+            <FileSearch class="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p>Nenhum requisito adicionado. Clique nos botões acima para começar.</p>
+          </div>
 
-            <div v-for="(attrKey, idx) in form.requested_attributes" :key="idx" class="bg-blue-900/30 rounded-lg p-4 border border-blue-700/50">
-              <div class="flex gap-3 items-start mb-3">
-                <div class="flex-1">
-                  <label class="text-xs text-blue-200 mb-1 block">Chave do Grupo</label>
-                  <Input v-model="attrKey.key" placeholder="Ex: dados_pessoais" class="bg-blue-900/60 border border-blue-700 text-white placeholder:text-blue-400 focus:ring-blue-500" />
+          <!-- Lista de Itens -->
+          <div class="space-y-3">
+            <div v-for="(item, idx) in form.proofItems" :key="idx" 
+                 :class="[
+                   'rounded-lg p-4 border-2 transition-all',
+                   item.type === 'attribute' ? 'bg-indigo-900/30 border-indigo-600/50' : '',
+                   item.type === 'predicate' ? 'bg-orange-900/30 border-orange-600/50' : '',
+                   item.type === 'self_attested' ? 'bg-teal-900/30 border-teal-600/50' : ''
+                 ]">
+              
+              <!-- Header do Item -->
+              <div class="flex items-start gap-3 mb-4">
+                <div class="flex-shrink-0 mt-1">
+                  <div :class="[
+                    'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold',
+                    item.type === 'attribute' ? 'bg-indigo-500 text-white' : '',
+                    item.type === 'predicate' ? 'bg-orange-500 text-white' : '',
+                    item.type === 'self_attested' ? 'bg-teal-500 text-white' : ''
+                  ]">
+                    {{ idx + 1 }}
+                  </div>
                 </div>
-                <div class="flex gap-2 pt-6">
-                  <Button type="button" @click="openSchemaModal(idx, 'attribute')" size="sm" class="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer">
-                    <FileSearch class="w-4 h-4 mr-1" /> Schema
-                  </Button>
-                  <Button type="button" @click="removeAttributeKey(idx)" size="sm" variant="ghost" class="text-red-400 hover:text-white hover:bg-red-700/30 cursor-pointer">
-                    <Trash2 class="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
+                
+                <div class="flex-1 space-y-3">
+                  <div class="flex items-center gap-3">
+                    <span :class="[
+                      'px-3 py-1 rounded-full text-xs font-semibold',
+                      item.type === 'attribute' ? 'bg-indigo-500/30 text-indigo-200' : '',
+                      item.type === 'predicate' ? 'bg-orange-500/30 text-orange-200' : '',
+                      item.type === 'self_attested' ? 'bg-teal-500/30 text-teal-200' : ''
+                    ]">
+                      {{ item.type === 'attribute' ? '📋 Atributo' : item.type === 'predicate' ? '🔢 Predicado' : '✍️ Auto-Atestado' }}
+                    </span>
+                    <Input v-model="item.key" placeholder="Chave do requisito (ex: nome_completo)" 
+                           class="flex-1 bg-blue-900/60 border border-blue-700 text-white placeholder:text-blue-400 focus:ring-blue-500" />
+                  </div>
 
-              <div v-if="attrKey.restrictions && attrKey.restrictions.length" class="mb-3">
-                <div class="text-xs text-blue-300 bg-blue-900/60 rounded px-3 py-2 border border-blue-700 font-mono">
-                  Schema: {{ attrKey.restrictions[0]?.schema_id }}
-                </div>
-              </div>
+                  <!-- Atributo -->
+                  <div v-if="item.type === 'attribute'" class="space-y-3 ml-2 pl-6 border-l-2 border-indigo-500/40">
+                    <div class="flex justify-between items-center">
+                      <label class="text-xs text-indigo-300 font-medium">Lista de Atributos:</label>
+                      <Button type="button" @click="addAttribute(idx)" size="sm" variant="ghost" 
+                              class="text-indigo-300 hover:text-white hover:bg-indigo-600/40 cursor-pointer">
+                        <Plus class="w-3 h-3 mr-1" /> Adicionar
+                      </Button>
+                    </div>
 
-              <div class="space-y-2 ml-2">
-                <label class="text-xs text-blue-200">Nomes dos Atributos</label>
-                <div v-for="(_, nIdx) in attrKey.names" :key="nIdx" class="flex gap-2 items-center">
-                  <Input v-model="attrKey.names[nIdx]" placeholder="Ex: nome, cpf, data_nascimento" class="bg-blue-900/60 border border-blue-700 text-white placeholder:text-blue-400 focus:ring-blue-500" />
-                  <Button type="button" @click="removeAttributeName(idx, nIdx)" size="sm" variant="ghost" class="text-red-400 hover:text-white hover:bg-red-700/30 cursor-pointer">
-                    <X class="w-4 h-4" />
-                  </Button>
+                    <div class="space-y-3">
+                      <div v-for="(_, aIdx) in item.attributes" :key="aIdx" class="bg-slate-800/40 rounded-lg p-3 border border-slate-700/50">
+                        <template v-if="item.attributeSchemas && item.attributeSchemas[aIdx]">
+                          <div class="flex items-center gap-2 mb-2">
+                            <input type="checkbox" v-model="item.attributeSchemas[aIdx].enabled" :id="`attr-schema-${idx}-${aIdx}`" 
+                                   class="w-4 h-4 rounded border-slate-600 bg-slate-900/60 text-indigo-500 focus:ring-indigo-500" />
+                            <label :for="`attr-schema-${idx}-${aIdx}`" class="text-xs text-slate-300 cursor-pointer">
+                              Vincular a um schema
+                            </label>
+                          </div>
+
+                          <!-- Schema vinculado -->
+                          <div v-if="item.attributeSchemas[aIdx].enabled" class="ml-6 space-y-2 mb-2">
+                            <div v-if="item.attributeSchemas[aIdx].schema" 
+                                 class="flex items-center justify-between bg-indigo-900/30 rounded px-3 py-2 border border-indigo-600/40">
+                              <div class="text-xs font-mono text-indigo-200 flex-1 truncate">
+                                {{ item.attributeSchemas[aIdx].schema.id }}
+                              </div>
+                              <Button type="button" @click="clearAttributeSchema(idx, aIdx)" size="sm" variant="ghost" 
+                                      class="text-indigo-400 hover:text-white hover:bg-indigo-600/30 cursor-pointer ml-2">
+                                <X class="w-3 h-3" />
+                              </Button>
+                            </div>
+                            <Button v-else type="button" @click="openSchemaModalForAttribute(idx, aIdx)" size="sm" 
+                                    class="bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer w-full">
+                              <FileSearch class="w-4 h-4 mr-1" /> Selecionar Schema
+                            </Button>
+                          </div>
+                        </template>
+
+                        <!-- Campo de atributo: Select se tem schema, Input se não -->
+                        <div class="flex gap-2 items-start">
+                          <div class="flex-1">
+                            <template v-if="item.attributeSchemas && item.attributeSchemas[aIdx]?.enabled && item.attributeSchemas[aIdx]?.schema">
+                              <Select v-model="item.attributes![aIdx]" class="w-full">
+                                <SelectTrigger class="bg-slate-900/60 border border-slate-600 text-white focus:ring-indigo-500">
+                                  <SelectValue class="text-slate-200" placeholder="Selecione um campo do schema" />
+                                </SelectTrigger>
+                                <SelectContent class="bg-slate-950 border-slate-600 max-h-60">
+                                  <SelectGroup>
+                                    <SelectItem 
+                                      v-for="attrName in item.attributeSchemas[aIdx].schema!.attrNames" 
+                                      :key="attrName" 
+                                      :value="attrName" 
+                                      class="cursor-pointer text-white hover:bg-indigo-600/40">
+                                      {{ attrName }}
+                                    </SelectItem>
+                                  </SelectGroup>
+                                </SelectContent>
+                              </Select>
+                            </template>
+                            <template v-else>
+                              <Input v-model="item.attributes![aIdx]" placeholder="Nome do atributo (ex: nome, cpf)" 
+                                     class="bg-slate-900/60 border border-slate-600 text-white placeholder:text-slate-400 focus:ring-indigo-500" />
+                            </template>
+                          </div>
+                          <Button type="button" @click="removeAttribute(idx, aIdx)" size="sm" variant="ghost" 
+                                  class="text-red-400 hover:text-white hover:bg-red-600/30 cursor-pointer">
+                            <Trash2 class="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Predicado -->
+                  <div v-if="item.type === 'predicate'" class="space-y-3 ml-2">
+                    <div class="flex items-center gap-2">
+                      <input type="checkbox" v-model="item.useSchema" :id="`schema-pred-${idx}`" 
+                             class="w-4 h-4 rounded border-slate-600 bg-slate-900/60 text-orange-500 focus:ring-orange-500" />
+                      <label :for="`schema-pred-${idx}`" class="text-sm text-slate-300 cursor-pointer">
+                        Vincular a um schema específico
+                      </label>
+                    </div>
+
+                    <div v-if="item.useSchema" class="space-y-3 pl-6 border-l-2 border-orange-500/40">
+                      <div v-if="item.schema" class="flex items-center justify-between bg-orange-900/30 rounded px-3 py-2 border border-orange-600/40">
+                        <div class="text-xs font-mono text-orange-200 flex-1 truncate">{{ item.schema.id }}</div>
+                        <Button type="button" @click="clearSchema(idx)" size="sm" variant="ghost" class="text-orange-400 hover:text-white hover:bg-orange-600/30 cursor-pointer ml-2">
+                          <X class="w-3 h-3" />
+                        </Button>
+                      </div>
+                      <Button v-else type="button" @click="openSchemaModal(idx)" size="sm" class="bg-orange-600 hover:bg-orange-700 text-white cursor-pointer">
+                        <FileSearch class="w-4 h-4 mr-1" /> Selecionar Schema
+                      </Button>
+                    </div>
+
+                    <div class="pl-6 border-l-2 border-orange-500/40 space-y-2">
+                      <label class="text-xs text-orange-200 font-medium">Configuração do predicado:</label>
+                      <div class="flex gap-2 items-center">
+                        <Input v-model="item.predicateName" placeholder="Nome do atributo" 
+                               class="bg-slate-900/60 border border-slate-600 text-white placeholder:text-slate-400 focus:ring-orange-500 flex-1" />
+                        <Select v-model="item.predicateType" class="w-28">
+                          <SelectTrigger class="bg-slate-900/60 border border-slate-600 text-white">
+                            <SelectValue class="text-slate-200" placeholder="Op" />
+                          </SelectTrigger>
+                          <SelectContent class="bg-slate-950 border-slate-600">
+                            <SelectGroup>
+                              <SelectItem class="cursor-pointer text-white" value=">=">&ge;</SelectItem>
+                              <SelectItem class="cursor-pointer text-white" value=">">&gt;</SelectItem>
+                              <SelectItem class="cursor-pointer text-white" value="<=">&le;</SelectItem>
+                              <SelectItem class="cursor-pointer text-white" value="<">&lt;</SelectItem>
+                              <SelectItem class="cursor-pointer text-white" value="==">=</SelectItem>
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                        <Input v-model="item.predicateValue" placeholder="Valor" type="number" 
+                               class="bg-slate-900/60 border border-slate-600 text-white placeholder:text-slate-400 focus:ring-orange-500 w-28" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Auto-Atestado -->
+                  <div v-if="item.type === 'self_attested'" class="pl-8 border-l-2 border-teal-500/40 space-y-2">
+                    <label class="text-xs text-teal-200 font-medium">
+                      Nome do atributo que o holder informará livremente:
+                    </label>
+                    <Input v-model="item.attributeName" placeholder="Ex: telefone, cidade, profissao" 
+                           class="bg-slate-900/60 border border-slate-600 text-white placeholder:text-slate-400 focus:ring-teal-500" />
+                    <p class="text-xs text-teal-300/70">O holder poderá preencher este valor sem necessidade de credencial.</p>
+                  </div>
                 </div>
-                <Button type="button" @click="addAttributeName(idx)" size="sm" variant="ghost" class="text-blue-300 hover:text-white hover:bg-blue-700/40 cursor-pointer">
-                  <Plus class="w-3 h-3 mr-1" /> Adicionar Atributo
+
+                <Button type="button" @click="removeProofItem(idx)" size="sm" variant="ghost" 
+                        class="text-red-400 hover:text-white hover:bg-red-700/30 cursor-pointer flex-shrink-0">
+                  <Trash2 class="w-4 h-4" />
                 </Button>
               </div>
             </div>
-          </TabsContent>
-
-          <!-- Tab de Predicados -->
-          <TabsContent value="predicates" class="space-y-4 mt-4">
-            <div class="flex justify-between items-center">
-              <p class="text-sm text-blue-200">Defina condições lógicas sobre os atributos (ex: idade >= 18)</p>
-              <Button type="button" @click="addPredicateKey" size="sm" class="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white">
-                <Plus class="w-4 h-4 mr-1" /> Adicionar Grupo
-              </Button>
-            </div>
-
-            <div v-if="form.requested_predicates.length === 0" class="text-center py-8 text-blue-300">
-              Nenhum predicado adicionado. Clique em "Adicionar Grupo" para começar.
-            </div>
-
-            <div v-for="(predKey, idx) in form.requested_predicates" :key="idx" class="bg-blue-900/30 rounded-lg p-4 border border-blue-700/50">
-              <div class="flex gap-3 items-start mb-3">
-                <div class="flex-1">
-                  <label class="text-xs text-blue-200 mb-1 block">Chave do Grupo</label>
-                  <Input v-model="predKey.key" placeholder="Ex: verificacao_idade" class="bg-blue-900/60 border border-blue-700 text-white placeholder:text-blue-400 focus:ring-blue-500" />
-                </div>
-                <div class="flex gap-2 pt-6">
-                  <Button type="button" @click="openSchemaModal(idx, 'predicate')" size="sm" class="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer">
-                    <FileSearch class="w-4 h-4 mr-1" /> Schema
-                  </Button>
-                  <Button type="button" @click="removePredicateKey(idx)" size="sm" variant="ghost" class="text-red-400 hover:text-white hover:bg-red-700/30 cursor-pointer">
-                    <Trash2 class="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div v-if="predKey.restrictions && predKey.restrictions.length" class="mb-3">
-                <div class="text-xs text-blue-300 bg-blue-900/60 rounded px-3 py-2 border border-blue-700 font-mono">
-                  Schema: {{ predKey.restrictions[0]?.schema_id }}
-                </div>
-              </div>
-
-              <div class="space-y-2 ml-2">
-                <label class="text-xs text-blue-200">Predicados</label>
-                <div v-for="(pred, pIdx) in predKey.predicates" :key="pIdx" class="flex gap-2 items-center">
-                  <Input v-model="pred.name" placeholder="Atributo" class="bg-blue-900/60 border border-blue-700 text-white placeholder:text-blue-400 focus:ring-blue-500 flex-1" />
-                  <Select v-model="pred.p_type" class="w-24">
-                    <SelectTrigger class="bg-blue-900/60 border border-blue-700 text-white">
-                      <SelectValue class="text-blue-200" placeholder="Op" />
-                    </SelectTrigger>
-                    <SelectContent class="bg-blue-950 border-blue-700">
-                      <SelectGroup>
-                        <SelectItem class="cursor-pointer text-white" value=">=">&ge;</SelectItem>
-                        <SelectItem class="cursor-pointer text-white" value=">">&gt;</SelectItem>
-                        <SelectItem class="cursor-pointer text-white" value="<=">&le;</SelectItem>
-                        <SelectItem class="cursor-pointer text-white" value="<">&lt;</SelectItem>
-                        <SelectItem class="cursor-pointer text-white" value="==">=</SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                  <Input v-model="pred.p_value" placeholder="Valor" type="number" class="bg-blue-900/60 border border-blue-700 text-white placeholder:text-blue-400 focus:ring-blue-500 w-24" />
-                  <Button type="button" @click="removePredicate(idx, pIdx)" size="sm" variant="ghost" class="text-red-400 hover:text-white hover:bg-red-700/30 cursor-pointer">
-                    <X class="w-4 h-4" />
-                  </Button>
-                </div>
-                <Button type="button" @click="addPredicate(idx)" size="sm" variant="ghost" class="text-blue-300 hover:text-white hover:bg-blue-700/40 cursor-pointer">
-                  <Plus class="w-3 h-3 mr-1" /> Adicionar Predicado
-                </Button>
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
 
         <!-- Botões -->
         <div class="flex justify-end gap-3 pt-4 border-t border-blue-700/30">
           <Button type="button" @click="resetForm" class="bg-blue-600 border-blue-600 text-white hover:bg-blue-700 cursor-pointer">
             Limpar
           </Button>
-          <Button type="submit" :disabled="!isFormValid" class="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white disabled:opacity-50 disabled:cursor-not-allowed">
+          <Button 
+            type="submit" 
+            :disabled="!isFormValid" 
+            @click="() => console.log('Botão clicado! isFormValid:', isFormValid)"
+            class="bg-blue-600 hover:bg-blue-700 cursor-pointer text-white disabled:opacity-50 disabled:cursor-not-allowed">
             <Send class="w-4 h-4 mr-2" />
             Enviar Solicitação
           </Button>
@@ -215,135 +293,237 @@
     <div v-if="!showForm" class="space-y-4 max-h-[60vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-blue-600 scrollbar-track-white/10">
       <div v-if="filteredProofExchanges.length === 0 && !appStore.isLoading" class="text-center py-12 text-blue-300">
         <FileSearch class="w-16 h-16 mx-auto mb-4 opacity-50" />
-        <p>Nenhum proof request encontrado</p>
+        <p>Nenhuma solicitação de prova encontrada</p>
       </div>
 
-      <div v-for="exchange in filteredProofExchanges" :key="exchange.pres_ex_id" class="bg-white/10 backdrop-blur-md rounded-lg border border-white/20 p-5 hover:bg-white/15 transition-all duration-200">
-        <div class="flex items-start justify-between mb-4">
-          <div class="flex-1">
-            <div class="flex items-center gap-3 mb-2">
-              <h3 class="text-lg font-semibold text-white">{{ exchange.pres_request.name }}</h3>
-              <span :class="getStateBadgeClass(exchange.state)" class="px-2 py-1 rounded-full text-xs font-medium">
-                {{ getStateLabel(exchange.state) }}
-              </span>
-              <span v-if="exchange.verified !== null" :class="exchange.verified === 'true' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'" class="px-2 py-1 rounded-full text-xs font-medium">
-                {{ exchange.verified === 'true' ? '✓ Verificado' : '✗ Não Verificado' }}
-              </span>
+      <div v-for="exchange in filteredProofExchanges" :key="exchange.pres_ex_id" 
+           :class="[
+             'relative rounded-2xl border transition-all duration-300 hover:shadow-2xl overflow-hidden',
+             getProofCardClass(exchange)
+           ]">
+        
+        <!-- Status Strip no Topo -->
+        <div :class="[
+          'px-6 py-3 flex items-center justify-between',
+          exchange.state === 'done' && isVerified(exchange) ? 'bg-gradient-to-r from-green-600/30 to-emerald-600/30 border-b border-green-500/30' : '',
+          exchange.state === 'done' && !isVerified(exchange) && exchange.verified !== null ? 'bg-gradient-to-r from-red-600/30 to-rose-600/30 border-b border-red-500/30' : '',
+          exchange.state === 'abandoned' ? 'bg-gradient-to-r from-red-600/30 to-rose-600/30 border-b border-red-500/30' : '',
+          exchange.state === 'request-sent' ? 'bg-gradient-to-r from-blue-600/30 to-indigo-600/30 border-b border-blue-500/30' : '',
+          exchange.state === 'presentation-received' ? 'bg-gradient-to-r from-yellow-600/30 to-amber-600/30 border-b border-yellow-500/30' : ''
+        ]">
+          <div class="flex items-center gap-3">
+            <div :class="[
+              'w-10 h-10 rounded-full flex items-center justify-center',
+              exchange.state === 'done' && isVerified(exchange) ? 'bg-green-500/30 ring-2 ring-green-400/50' : '',
+              exchange.state === 'done' && !isVerified(exchange) && exchange.verified !== null ? 'bg-red-500/30 ring-2 ring-red-400/50' : '',
+              exchange.state === 'abandoned' ? 'bg-red-500/30 ring-2 ring-red-400/50' : '',
+              exchange.state === 'request-sent' ? 'bg-blue-500/30 ring-2 ring-blue-400/50' : '',
+              exchange.state === 'presentation-received' ? 'bg-yellow-500/30 ring-2 ring-yellow-400/50' : 'bg-gray-500/30 ring-2 ring-gray-400/50'
+            ]">
+              <!-- Ícone Verificada -->
+              <svg v-if="exchange.state === 'done' && isVerified(exchange)" class="w-6 h-6 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <!-- Ícone Falhou -->
+              <svg v-else-if="exchange.state === 'done' && !isVerified(exchange) && exchange.verified !== null" class="w-6 h-6 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <!-- Ícone Abandonado -->
+              <svg v-else-if="exchange.state === 'abandoned'" class="w-6 h-6 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <!-- Ícone Enviado -->
+              <svg v-else-if="exchange.state === 'request-sent'" class="w-6 h-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+              <!-- Ícone Recebido -->
+              <svg v-else-if="exchange.state === 'presentation-received'" class="w-6 h-6 text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+              </svg>
+              <!-- Ícone Default -->
+              <svg v-else class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
             </div>
-            <div class="text-sm space-y-1">
-              <div class="text-blue-200">
-                <span class="font-medium">Conexão:</span>
-                <span class="ml-2 text-white">{{ getConnectionAlias(exchange.connection_id) }}</span>
+            <div>
+              <div class="text-white font-bold text-base">
+                {{ exchange.state === 'done' && isVerified(exchange) ? '✓ Prova Verificada' : '' }}
+                {{ exchange.state === 'done' && !isVerified(exchange) && exchange.verified !== null ? '✗ Verificação Falhou' : '' }}
+                {{ exchange.state === 'abandoned' ? '⚠ Apresentação Abandonada' : '' }}
+                {{ exchange.state === 'request-sent' ? 'Aguardando Resposta' : '' }}
+                {{ exchange.state === 'presentation-received' ? 'Prova Recebida' : '' }}
               </div>
-              <div class="text-blue-200">
-                <span class="font-medium">Criado em:</span>
-                <span class="ml-2 text-white">{{ formatDate(exchange.created_at) }}</span>
-              </div>
-              <div v-if="exchange.updated_at !== exchange.created_at" class="text-blue-200">
-                <span class="font-medium">Atualizado em:</span>
-                <span class="ml-2 text-white">{{ formatDate(exchange.updated_at) }}</span>
+              <div class="text-xs text-white/70">
+                {{ formatDate(exchange.created_at) }}
               </div>
             </div>
           </div>
+          <span :class="getStateBadgeClass(exchange.state)" 
+                class="px-3 py-1.5 rounded-full text-xs font-bold shadow-lg">
+            {{ getStateLabel(exchange.state) }}
+          </span>
         </div>
 
-        <!-- Mensagens de Erro de Verificação -->
-        <div v-if="exchange.verified === 'false' && exchange.verified_msgs && exchange.verified_msgs.length > 0" class="mb-4 bg-red-900/20 border border-red-500/40 rounded-lg p-4">
-          <div class="flex items-start gap-3">
-            <div class="flex-shrink-0">
-              <div class="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
-                <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        <!-- Conteúdo do Card -->
+        <div class="p-6 space-y-5">
+          <!-- Informações Principais -->
+          <div>
+            <h3 class="text-2xl font-bold text-white mb-3">{{ exchange.pres_request.name }}</h3>
+            <div class="flex items-center gap-2 text-blue-200">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span class="font-medium">Holder:</span>
+              <span class="text-white font-semibold">{{ getConnectionAlias(exchange.connection_id) }}</span>
+            </div>
+          </div>
+
+          <!-- Mensagem de Erro para Abandoned -->
+          <div v-if="exchange.state === 'abandoned'" 
+               class="bg-gradient-to-br from-red-900/40 to-rose-900/40 border-2 border-red-500/60 rounded-xl p-5">
+            <div class="flex items-start gap-3">
+              <svg class="w-6 h-6 text-red-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div class="flex-1">
+                <h4 class="text-base font-bold text-red-200 mb-1">Apresentação Abandonada</h4>
+                <p class="text-sm text-red-300/90">{{ exchange.error_msg || 'O holder não conseguiu gerar a apresentação' }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mensagens de Erro -->
+          <div v-if="!isVerified(exchange) && exchange.verified_msgs && exchange.verified_msgs.length > 0" 
+               class="bg-gradient-to-br from-red-900/40 to-rose-900/40 border-2 border-red-500/60 rounded-xl p-5">
+            <div class="flex items-start gap-3 mb-3">
+              <svg class="w-6 h-6 text-red-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div class="flex-1">
+                <h4 class="text-base font-bold text-red-200 mb-1">Problemas Detectados</h4>
+                <p class="text-sm text-red-300/80">A prova não passou nas seguintes verificações:</p>
+              </div>
+            </div>
+            <ul class="space-y-2 pl-9">
+              <li v-for="(msg, idx) in exchange.verified_msgs" :key="idx" 
+                  class="text-sm text-red-100 bg-red-950/50 rounded-lg px-4 py-2.5 border border-red-600/40">
+                {{ formatErrorMessage(msg) }}
+              </li>
+            </ul>
+          </div>
+
+          <!-- Requisitos e Respostas em Grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <!-- Requisitos -->
+            <div class="bg-blue-900/20 rounded-xl p-5 border border-blue-600/30">
+              <h4 class="text-sm font-bold text-blue-300 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                 </svg>
+                O que foi solicitado
+              </h4>
+              
+              <!-- Atributos Solicitados -->
+              <div v-if="Object.keys(exchange.pres_request.requested_attributes).length > 0" class="space-y-3 mb-4">
+                <div class="text-xs font-semibold text-indigo-300 uppercase tracking-wide mb-2">📋 Atributos</div>
+                <div v-for="(attr, key) in exchange.pres_request.requested_attributes" :key="key" 
+                     class="bg-indigo-900/40 border border-indigo-600/50 rounded-lg px-3 py-2">
+                  <div class="text-xs text-indigo-300 mb-0.5">{{ key }}</div>
+                  <div class="text-sm text-white font-medium">
+                    <span v-if="attr.name">{{ attr.name }}</span>
+                    <span v-else-if="attr.names">{{ attr.names.join(', ') }}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Predicados Solicitados -->
+              <div v-if="Object.keys(exchange.pres_request.requested_predicates).length > 0" class="space-y-3">
+                <div class="text-xs font-semibold text-orange-300 uppercase tracking-wide mb-2">🔢 Predicados</div>
+                <div v-for="(pred, key) in exchange.pres_request.requested_predicates" :key="key" 
+                     class="bg-orange-900/40 border border-orange-600/50 rounded-lg px-3 py-2">
+                  <div class="text-xs text-orange-300 mb-0.5">{{ key }}</div>
+                  <div class="text-sm text-white font-medium font-mono">
+                    {{ pred.name }} {{ pred.p_type }} {{ pred.p_value }}
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="Object.keys(exchange.pres_request.requested_attributes).length === 0 && Object.keys(exchange.pres_request.requested_predicates).length === 0" 
+                   class="text-center py-4 text-blue-300/50 text-sm">
+                Nenhum requisito específico
               </div>
             </div>
-            <div class="flex-1">
-              <h4 class="text-sm font-semibold text-red-300 mb-2">Falha na Verificação</h4>
-              <p class="text-xs text-red-200/80 mb-3">A prova apresentada pelo holder não atende aos requisitos solicitados:</p>
-              <ul class="space-y-2">
-                <li v-for="(msg, idx) in exchange.verified_msgs" :key="idx" class="text-xs text-red-200 bg-red-900/30 rounded px-3 py-2 flex items-start gap-2">
-                  <span class="text-red-400 flex-shrink-0 font-bold">→</span>
-                  <span class="flex-1">{{ formatErrorMessage(msg) }}</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
 
-        <!-- Atributos e Predicados Solicitados -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-blue-700/30">
-          <div v-if="Object.keys(exchange.pres_request.requested_attributes).length > 0">
-            <h4 class="text-sm font-medium text-blue-200 mb-2">Atributos Solicitados:</h4>
-            <div class="space-y-1">
-              <div v-for="(attr, key) in exchange.pres_request.requested_attributes" :key="key" class="text-xs bg-blue-900/40 rounded px-2 py-1 text-white">
-                <span class="font-medium text-blue-300">{{ key }}:</span>
-                <span v-if="attr.name" class="ml-1">{{ attr.name }}</span>
-                <span v-else-if="attr.names" class="ml-1">{{ attr.names.join(', ') }}</span>
+            <!-- Respostas -->
+            <div class="bg-green-900/20 rounded-xl p-5 border border-green-600/30">
+              <h4 class="text-sm font-bold text-green-300 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                O que foi apresentado
+              </h4>
+
+              <div v-if="!exchange.pres" class="text-center py-8 text-green-300/50 text-sm">
+                <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Aguardando prova do holder
+              </div>
+
+              <!-- Atributos Revelados -->
+              <div v-if="hasRevealedAttrs(exchange)" class="space-y-3 mb-4">
+                <div class="text-xs font-semibold text-green-300 uppercase tracking-wide mb-2 flex items-center gap-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  Revelados
+                </div>
+                <div v-for="(attr, key) in exchange.pres.revealed_attrs" :key="key" 
+                     class="bg-green-900/40 border border-green-600/50 rounded-lg px-3 py-2">
+                  <div class="text-xs text-green-300 mb-0.5">{{ key }}</div>
+                  <div class="text-sm text-white font-semibold">{{ attr.raw }}</div>
+                </div>
+              </div>
+
+              <!-- Atributos Não Revelados -->
+              <div v-if="hasUnrevealedAttrs(exchange)" class="space-y-3 mb-4">
+                <div class="text-xs font-semibold text-yellow-300 uppercase tracking-wide mb-2 flex items-center gap-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                  Não Revelados (ZKP)
+                </div>
+                <div v-for="(_, key) in exchange.pres.unrevealed_attrs" :key="key" 
+                     class="bg-yellow-900/40 border border-yellow-600/50 rounded-lg px-3 py-2">
+                  <div class="text-xs text-yellow-300 mb-0.5">{{ key }}</div>
+                  <div class="text-xs text-yellow-200 italic">Comprovado via Zero-Knowledge Proof</div>
+                </div>
+              </div>
+
+              <!-- Predicados -->
+              <div v-if="hasPredicates(exchange)" class="space-y-3">
+                <div class="text-xs font-semibold text-blue-300 uppercase tracking-wide mb-2 flex items-center gap-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Predicados Validados
+                </div>
+                <div v-for="(_, key) in exchange.pres.predicates" :key="key" 
+                     class="bg-blue-900/40 border border-blue-600/50 rounded-lg px-3 py-2">
+                  <div class="text-xs text-blue-300 mb-0.5">{{ key }}</div>
+                  <template v-if="exchange.pres_request.requested_predicates[key]">
+                    <div class="text-xs text-white">
+                      {{ exchange.pres_request.requested_predicates[key].name }}
+                      {{ exchange.pres_request.requested_predicates[key].p_type }}
+                      {{ exchange.pres_request.requested_predicates[key].p_value }}
+                      <span class="text-blue-300 ml-1">✓</span>
+                    </div>
+                  </template>
+                </div>
               </div>
             </div>
           </div>
-          <div v-if="Object.keys(exchange.pres_request.requested_predicates).length > 0">
-            <h4 class="text-sm font-medium text-blue-200 mb-2">Predicados:</h4>
-            <div class="space-y-1">
-              <div v-for="(pred, key) in exchange.pres_request.requested_predicates" :key="key" class="text-xs bg-blue-900/40 rounded px-2 py-1 text-white">
-                <span class="font-medium text-blue-300">{{ key }}:</span>
-                <span class="ml-1">{{ pred.name }} {{ pred.p_type }} {{ pred.p_value }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Atributos Revelados pelo Holder -->
-        <div v-if="exchange.pres && exchange.pres.revealed_attrs && Object.keys(exchange.pres.revealed_attrs).length > 0" class="mt-4">
-          <h4 class="text-base font-bold text-green-400 mb-3 flex items-center gap-2">
-            <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-            Atributos Revelados
-          </h4>
-          <ul class="space-y-2">
-            <li v-for="(attr, key) in exchange.pres.revealed_attrs" :key="key" class="flex items-center gap-3 bg-green-900/30 border border-green-700/40 rounded-lg px-4 py-2">
-              <span class="font-semibold text-green-300">{{ key }}:</span>
-              <span class="text-white text-sm">{{ attr.raw }}</span>
-            </li>
-          </ul>
-        </div>
-
-        <!-- Atributos Não Revelados pelo Holder -->
-        <div v-if="exchange.pres && exchange.pres.unrevealed_attrs && Object.keys(exchange.pres.unrevealed_attrs).length > 0" class="mt-4">
-          <h4 class="text-base font-bold text-yellow-400 mb-3 flex items-center gap-2">
-            <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01" /></svg>
-            Atributos Não Revelados
-          </h4>
-          <ul class="space-y-2">
-            <li v-for="(_, key) in exchange.pres.unrevealed_attrs" :key="key" class="flex items-center gap-3 bg-yellow-900/30 border border-yellow-700/40 rounded-lg px-4 py-2">
-              <span class="font-semibold text-yellow-300">{{ key }}:</span>
-              <span class="text-white text-sm">Não revelado pelo holder</span>
-            </li>
-          </ul>
-        </div>
-
-        <!-- Predicados Apresentados -->
-        <div v-if="exchange.pres && exchange.pres.predicates && Object.keys(exchange.pres.predicates).length > 0 && exchange.pres_request && exchange.pres_request.requested_predicates" class="mt-4">
-          <h4 class="text-base font-bold text-blue-400 mb-3 flex items-center gap-2">
-            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 17l-4 4m0 0l-4-4m4 4V3" /></svg>
-            Predicados Apresentados
-          </h4>
-          <ul class="space-y-2">
-            <li v-for="(_, key) in exchange.pres.predicates" :key="key" class="bg-blue-900/30 border border-blue-700/40 rounded-lg px-4 py-2">
-              <span class="text-blue-300 font-semibold">{{ key }}:</span>
-              <span class="text-white text-sm">
-                <template v-if="exchange.pres_request.requested_predicates[key]">
-                  <!-- Monta frase explicativa -->
-                  O atributo <b>{{ exchange.pres_request.requested_predicates[key].name }}</b> foi apresentado conforme solicitado:
-                  <b>{{ exchange.pres_request.requested_predicates[key].name }}</b>
-                  <b>{{ exchange.pres_request.requested_predicates[key].p_type }}</b>
-                  <b>{{ exchange.pres_request.requested_predicates[key].p_value }}</b>
-                </template>
-                <template v-else>
-                  Predicado apresentado
-                </template>
-              </span>
-            </li>
-          </ul>
         </div>
       </div>
     </div>
@@ -359,7 +539,6 @@ import { Plus, Trash2, X, Send, FileSearch } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useConnectionStore, useProofStore, useAppStore } from '@/stores'
 import SchemaSearchModal from '@/components/SchemaSearchModal.vue'
 
@@ -373,28 +552,41 @@ const searchTerm = ref('')
 const stateFilter = ref('all')
 
 // Interfaces
-interface RequestedAttribute {
-  key: string
-  names: string[]
-  restrictions?: Array<{ schema_id: string }>
+interface AttributeSchema {
+  enabled: boolean
+  schema?: {
+    id: string
+    attrNames: string[]
+  }
 }
 
-interface RequestedPredicate {
+interface ProofItem {
+  type: 'attribute' | 'predicate' | 'self_attested'
   key: string
-  predicates: Array<{
-    name: string
-    p_type: string
-    p_value: string | number
-  }>
-  restrictions?: Array<{ schema_id: string }>
+  
+  // Para atributos
+  attributes?: string[]
+  attributeSchemas?: AttributeSchema[]
+  
+  // Para predicados
+  useSchema?: boolean
+  schema?: {
+    id: string
+    attrNames: string[]
+  }
+  predicateName?: string
+  predicateType?: string
+  predicateValue?: string | number
+  
+  // Para self-attested
+  attributeName?: string
 }
 
 interface ProofRequestForm {
   connection_id: string
   name: string
   version: string
-  requested_attributes: RequestedAttribute[]
-  requested_predicates: RequestedPredicate[]
+  proofItems: ProofItem[]
 }
 
 // Form State
@@ -402,22 +594,36 @@ const form = ref<ProofRequestForm>({
   connection_id: '',
   name: '',
   version: '1.0',
-  requested_attributes: [],
-  requested_predicates: []
+  proofItems: []
 })
 
 // Schema Modal State
 const showSchemaModal = ref(false)
 const schemaModalIndex = ref(-1)
-const schemaModalType = ref('attribute')
+const schemaModalAttributeIndex = ref(-1)
 
 // Computed
-const activeConnections = computed(() =>
-  connectionStore.connections.filter(c => c.state === 'active' || c.state === 'response')
-)
+const activeConnections = computed(() => {
+  const active = connectionStore.connections.filter(c => c.state === 'active' || c.state === 'response')
+  console.log('Active connections:', active)
+  return active
+})
 
 const isFormValid = computed(() => {
-  return form.value.connection_id && form.value.name.trim() !== ''
+  const hasConnection = !!form.value.connection_id
+  const hasName = form.value.name.trim() !== ''
+  const hasItems = form.value.proofItems.length > 0
+  
+  console.log('Validação do form:', {
+    hasConnection,
+    hasName,
+    hasItems,
+    connection_id: form.value.connection_id,
+    name: form.value.name,
+    proofItems: form.value.proofItems
+  })
+  
+  return hasConnection && hasName && hasItems
 })
 
 const filteredProofExchanges = computed(() => {
@@ -455,132 +661,221 @@ function resetForm() {
     connection_id: '',
     name: '',
     version: '1.0',
-    requested_attributes: [],
-    requested_predicates: []
+    proofItems: []
   }
 }
 
-// Attribute Actions
-function addAttributeKey() {
-  form.value.requested_attributes.push({ key: '', names: [''], restrictions: [] })
+// Proof Item Actions
+function addProofItem(type: 'attribute' | 'predicate' | 'self_attested') {
+  const newItem: ProofItem = {
+    type,
+    key: '',
+  }
+
+  if (type === 'attribute') {
+    newItem.attributes = ['']
+    newItem.attributeSchemas = [{ enabled: false }]
+  } else if (type === 'predicate') {
+    newItem.useSchema = false
+    newItem.predicateName = ''
+    newItem.predicateType = '>='
+    newItem.predicateValue = ''
+  } else if (type === 'self_attested') {
+    newItem.attributeName = ''
+  }
+
+  form.value.proofItems.push(newItem)
 }
 
-function removeAttributeKey(idx: number) {
-  form.value.requested_attributes.splice(idx, 1)
+function removeProofItem(idx: number) {
+  form.value.proofItems.splice(idx, 1)
 }
 
-function addAttributeName(attrIdx: number) {
-  const attr = form.value.requested_attributes[attrIdx]
-  if (attr) {
-    attr.names.push('')
+function addAttribute(idx: number) {
+  const item = form.value.proofItems[idx]
+  if (item && item.attributes && item.attributeSchemas) {
+    item.attributes.push('')
+    item.attributeSchemas.push({ enabled: false })
   }
 }
 
-function removeAttributeName(attrIdx: number, nameIdx: number) {
-  const attr = form.value.requested_attributes[attrIdx]
-  if (attr) {
-    attr.names.splice(nameIdx, 1)
-  }
-}
-
-// Predicate Actions
-function addPredicateKey() {
-  form.value.requested_predicates.push({ key: '', predicates: [{ name: '', p_type: '>=', p_value: '' }], restrictions: [] })
-}
-
-function removePredicateKey(idx: number) {
-  form.value.requested_predicates.splice(idx, 1)
-}
-
-function addPredicate(idx: number) {
-  const predKey = form.value.requested_predicates[idx]
-  if (predKey) {
-    predKey.predicates.push({ name: '', p_type: '>=', p_value: '' })
-  }
-}
-
-function removePredicate(idx: number, pIdx: number) {
-  const predKey = form.value.requested_predicates[idx]
-  if (predKey) {
-    predKey.predicates.splice(pIdx, 1)
+function removeAttribute(itemIdx: number, attrIdx: number) {
+  const item = form.value.proofItems[itemIdx]
+  if (item && item.attributes && item.attributeSchemas) {
+    item.attributes.splice(attrIdx, 1)
+    item.attributeSchemas.splice(attrIdx, 1)
   }
 }
 
 // Schema Modal Actions
-function openSchemaModal(idx: number, type: string) {
+function openSchemaModal(idx: number) {
   schemaModalIndex.value = idx
-  schemaModalType.value = type
+  schemaModalAttributeIndex.value = -1
+  showSchemaModal.value = true
+}
+
+function openSchemaModalForAttribute(itemIdx: number, attrIdx: number) {
+  schemaModalIndex.value = itemIdx
+  schemaModalAttributeIndex.value = attrIdx
   showSchemaModal.value = true
 }
 
 function closeSchemaModal() {
   showSchemaModal.value = false
+  schemaModalAttributeIndex.value = -1
+}
+
+function clearSchema(idx: number) {
+  const item = form.value.proofItems[idx]
+  if (item) {
+    item.schema = undefined
+  }
+}
+
+function clearAttributeSchema(itemIdx: number, attrIdx: number) {
+  const item = form.value.proofItems[itemIdx]
+  if (item && item.attributeSchemas && item.attributeSchemas[attrIdx]) {
+    item.attributeSchemas[attrIdx].schema = undefined
+  }
 }
 
 function handleSchemaSelect(schema: any) {
-  if (schemaModalType.value === 'attribute') {
-    const attr = form.value.requested_attributes[schemaModalIndex.value]
-    if (attr) attr.restrictions = [{ schema_id: schema.id }]
+  const item = form.value.proofItems[schemaModalIndex.value]
+  if (!item) return
+
+  // Schema para atributo individual
+  if (schemaModalAttributeIndex.value >= 0) {
+    const attrSchemaArray = item.attributeSchemas
+    const attrSchema = attrSchemaArray?.[schemaModalAttributeIndex.value]
+    if (attrSchema) {
+      attrSchema.schema = {
+        id: schema.id,
+        attrNames: schema.attrNames || []
+      }
+    }
   } else {
-    const pred = form.value.requested_predicates[schemaModalIndex.value]
-    if (pred) pred.restrictions = [{ schema_id: schema.id }]
+    // Schema para predicado
+    item.schema = {
+      id: schema.id,
+      attrNames: schema.attrNames || []
+    }
   }
+  
   closeSchemaModal()
 }
 
 // Form Submit
 async function handleSubmit() {
+  console.log('=== INICIANDO SUBMIT ===')
+  console.log('Form data:', JSON.stringify(form.value, null, 2))
+  
   const requested_attributes: Record<string, any> = {}
-  for (const attr of form.value.requested_attributes) {
-    if (attr.key && attr.names.length) {
-      const filteredNames = attr.names.filter(n => n && n.trim())
-      if (filteredNames.length === 0) continue
-
-      if (filteredNames.length === 1) {
-        requested_attributes[attr.key] = {
-          name: filteredNames[0],
-          restrictions: attr.restrictions && attr.restrictions.length ? attr.restrictions : undefined
-        }
-      } else {
-        requested_attributes[attr.key] = {
-          names: filteredNames,
-          restrictions: attr.restrictions && attr.restrictions.length ? attr.restrictions : undefined
-        }
-      }
-    }
-  }
-
   const requested_predicates: Record<string, any> = {}
-  for (const pred of form.value.requested_predicates) {
-    if (pred.key && pred.predicates.length) {
-      const filteredPredicates = pred.predicates.filter(p => p.name && p.p_type && p.p_value !== '')
-      if (filteredPredicates.length === 0) continue
+  const self_attested_attributes: Record<string, string> = {}
 
-      if (filteredPredicates.length === 1) {
-        const p = filteredPredicates[0]
-        if (p) {
-          requested_predicates[pred.key] = {
-            name: p.name,
-            p_type: p.p_type,
-            p_value: Number(p.p_value),
-            restrictions: pred.restrictions && pred.restrictions.length ? pred.restrictions : undefined
+  for (const item of form.value.proofItems) {
+    console.log('Processando item:', item)
+    if (!item.key || !item.key.trim()) {
+      console.log('Item ignorado: key vazia')
+      continue
+    }
+
+    if (item.type === 'attribute') {
+      const names = (item.attributes || []).filter(a => a && a.trim())
+      if (names.length === 0) continue
+
+      // Verificar se há schemas individuais configurados
+      const hasIndividualSchemas = item.attributeSchemas?.some(s => s.enabled && s.schema)
+
+      if (hasIndividualSchemas && item.attributeSchemas) {
+        // Agrupar atributos por schema
+        const schemaGroups = new Map<string | null, string[]>()
+        
+        names.forEach((name, idx) => {
+          const attrSchema = item.attributeSchemas![idx]
+          const schemaId = attrSchema?.enabled && attrSchema.schema ? attrSchema.schema.id : null
+          
+          if (!schemaGroups.has(schemaId)) {
+            schemaGroups.set(schemaId, [])
           }
+          schemaGroups.get(schemaId)!.push(name)
+        })
+
+        // Se todos os atributos têm o mesmo schema (ou nenhum), usar um único grupo
+        if (schemaGroups.size === 1) {
+          const firstEntry = Array.from(schemaGroups.entries())[0]
+          if (firstEntry) {
+            const [schemaId, attrs] = firstEntry
+            
+            if (attrs.length === 1) {
+              requested_attributes[item.key] = {
+                name: attrs[0],
+                restrictions: schemaId ? [{ schema_id: schemaId }] : undefined
+              }
+            } else {
+              requested_attributes[item.key] = {
+                names: attrs,
+                restrictions: schemaId ? [{ schema_id: schemaId }] : undefined
+              }
+            }
+          }
+        } else {
+          // Schemas diferentes: criar grupos separados
+          let groupIndex = 1
+          schemaGroups.forEach((attrs, schemaId) => {
+            const groupKey = schemaGroups.size > 1 ? `${item.key}_${groupIndex}` : item.key
+            
+            if (attrs.length === 1) {
+              requested_attributes[groupKey] = {
+                name: attrs[0],
+                restrictions: schemaId ? [{ schema_id: schemaId }] : undefined
+              }
+            } else {
+              requested_attributes[groupKey] = {
+                names: attrs,
+                restrictions: schemaId ? [{ schema_id: schemaId }] : undefined
+              }
+            }
+            groupIndex++
+          })
         }
       } else {
-        requested_predicates[pred.key] = filteredPredicates.map(p => {
-          if (!p) return null
-          return {
-            name: p.name,
-            p_type: p.p_type,
-            p_value: Number(p.p_value),
-            restrictions: pred.restrictions && pred.restrictions.length ? pred.restrictions : undefined
+        // Sem schemas individuais - grupo único com o identificador original
+        if (names.length === 1) {
+          requested_attributes[item.key] = {
+            name: names[0]
           }
-        }).filter(p => p !== null)
+        } else {
+          requested_attributes[item.key] = {
+            names
+          }
+        }
       }
+    } else if (item.type === 'predicate') {
+      if (!item.predicateName || !item.predicateType || item.predicateValue === '' || item.predicateValue === undefined) continue
+
+      const predicate: any = {
+        name: item.predicateName,
+        p_type: item.predicateType,
+        p_value: Number(item.predicateValue)
+      }
+
+      if (item.useSchema && item.schema) {
+        predicate.restrictions = [{ schema_id: item.schema.id }]
+      }
+
+      requested_predicates[item.key] = predicate
+    } else if (item.type === 'self_attested') {
+      if (!item.attributeName || !item.attributeName.trim()) continue
+      self_attested_attributes[item.key] = item.attributeName
     }
   }
 
-  const payload = {
+  console.log('Requested Attributes:', requested_attributes)
+  console.log('Requested Predicates:', requested_predicates)
+  console.log('Self Attested:', self_attested_attributes)
+
+  const payload: any = {
     connection_id: form.value.connection_id,
     proof_request: {
       name: form.value.name,
@@ -590,7 +885,16 @@ async function handleSubmit() {
     }
   }
 
+  // Adicionar self_attested_attributes apenas se houver itens
+  if (Object.keys(self_attested_attributes).length > 0) {
+    payload.proof_request.self_attested_attributes = self_attested_attributes
+  }
+
+  console.log('Payload final:', JSON.stringify(payload, null, 2))
+
   const result = await proofStore.sendProofRequest(payload)
+  
+  console.log('Resultado:', result)
 
   if (result !== null) {
     resetForm()
@@ -609,7 +913,7 @@ function getStateBadgeClass(state: string): string {
     'request-sent': 'bg-blue-500/20 text-blue-300',
     'presentation-received': 'bg-yellow-500/20 text-yellow-300',
     'done': 'bg-green-500/20 text-green-300',
-    'abandoned': 'bg-gray-500/20 text-gray-300'
+    'abandoned': 'bg-red-500/20 text-red-300'
   }
   return classes[state] || 'bg-gray-500/20 text-gray-300'
 }
@@ -657,6 +961,39 @@ function formatErrorMessage(msg: string): string {
   formatted = formatted.replace('::', ': ')
   
   return formatted
+}
+
+// Funções auxiliares para verificação
+function isVerified(exchange: any): boolean {
+  // O campo verified pode ser string 'true'/'false' ou booleano
+  return exchange.verified === 'true' || exchange.verified === true
+}
+
+function getProofCardClass(exchange: any): string {
+  if (exchange.state === 'abandoned') {
+    return 'bg-gradient-to-br from-red-900/20 to-rose-900/20 border-red-500/30 hover:border-red-400/50'
+  }
+  if (exchange.state === 'done') {
+    if (isVerified(exchange)) {
+      return 'bg-gradient-to-br from-green-900/20 to-emerald-900/20 border-green-500/30 hover:border-green-400/50'
+    } else if (exchange.verified !== null) {
+      return 'bg-gradient-to-br from-red-900/20 to-rose-900/20 border-red-500/30 hover:border-red-400/50'
+    }
+  }
+  return 'bg-white/10 border-white/20 hover:border-white/30'
+}
+
+function hasRevealedAttrs(exchange: any): boolean {
+  return exchange.pres?.revealed_attrs && Object.keys(exchange.pres.revealed_attrs).length > 0
+}
+
+function hasUnrevealedAttrs(exchange: any): boolean {
+  return exchange.pres?.unrevealed_attrs && Object.keys(exchange.pres.unrevealed_attrs).length > 0
+}
+
+function hasPredicates(exchange: any): boolean {
+  return exchange.pres?.predicates && Object.keys(exchange.pres.predicates).length > 0 &&
+         exchange.pres_request?.requested_predicates
 }
 
 // Lifecycle

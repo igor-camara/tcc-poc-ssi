@@ -189,7 +189,7 @@ services:
         --preserve-exchange-records
         --auto-provision
         --genesis-url http://webserver:8000/genesis
-        --webhook-url http://host.docker.internal:8002/webhook
+        --webhook-url http://verifier-api:8002/webhook
         --log-level DEBUG
         --debug-connections
         --auto-accept-invites
