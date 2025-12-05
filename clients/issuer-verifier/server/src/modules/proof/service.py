@@ -8,23 +8,28 @@ def create_proof_request(payload: dict) -> dict | str:
         return {"error": "connection_id and proof_request are required"}
 
     requested_attributes = {}
+
     for referent, attr in proof_req.get("requested_attributes", {}).items():
-        attr_payload = {}
+
         if "name" in attr:
-            attr_payload["name"] = attr["name"]
+            requested_attributes[referent] = {
+                "name": attr["name"],
+                "restrictions": attr.get("restrictions", [])
+            }
+
         if "names" in attr:
-            attr_payload["names"] = attr["names"]
-        if "restrictions" in attr:
-            attr_payload["restrictions"] = attr["restrictions"]
-        requested_attributes[referent] = attr_payload
+            for name in attr["names"]:
+                expanded_ref = f"{referent}_{name}"
+                requested_attributes[expanded_ref] = {
+                    "name": name,
+                    "restrictions": attr.get("restrictions", [])
+                }
 
     requested_predicates = {}
     for referent, pred in proof_req.get("requested_predicates", {}).items():
-        pred_payload = {}
-        for k in ["name", "p_type", "p_value", "restrictions"]:
-            if k in pred:
-                pred_payload[k] = pred[k]
-        requested_predicates[referent] = pred_payload
+        requested_predicates[referent] = {
+            k: pred[k] for k in ["name", "p_type", "p_value", "restrictions"] if k in pred
+        }
 
     props = {
         "connection_id": connection_id,

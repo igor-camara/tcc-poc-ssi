@@ -170,19 +170,19 @@
 
           <!-- Requested Attributes -->
           <div v-else class="space-y-6">
-            <div v-for="(attrConfig, referent) in selectedRequest.requested_attributes" :key="referent">
+            <div v-for="group in groupedAttributes" :key="group.groupKey">
               <div class="bg-white/5 rounded-lg p-4 border border-white/10">
                 <h4 class="text-white font-semibold mb-4 flex items-center">
                   <FileText class="w-4 h-4 mr-2" />
-                  Grupo: {{ referent }}
+                  {{ group.isGroup ? 'Grupo' : 'Atributo' }}: {{ group.displayName }}
                 </h4>
 
                 <!-- Restrictions Info -->
-                  <div v-if="attrConfig.restrictions && attrConfig.restrictions.length > 0" class="mb-4">
+                  <div v-if="group.attributes[0]?.restrictions && group.attributes[0].restrictions.length > 0" class="mb-4">
                     <p class="text-purple-200 text-xs mb-1">Restrições:</p>
                     <div class="flex flex-col gap-1">
                       <span 
-                        v-for="(restriction, idx) in attrConfig.restrictions" 
+                        v-for="(restriction, idx) in group.attributes[0].restrictions" 
                         :key="idx"
                         class="text-xs text-purple-300"
                       >
@@ -199,12 +199,12 @@
                     </div>
                   </div>
                       <!-- Toggle de revelação para grupo -->
-                      <div v-if="attrConfig.names && attrConfig.names.length > 0" class="mb-4 flex items-center gap-2">
+                      <div v-if="group.isGroup && group.attributes.length > 1" class="mb-4 flex items-center gap-2">
                         <label class="relative inline-flex items-center cursor-pointer">
                           <input 
                             type="checkbox"
-                            :checked="getGroupRevealed(referent)"
-                            @change="(e) => setGroupRevealed(referent, (e.target as HTMLInputElement).checked)"
+                            :checked="getGroupRevealedForGroup(group)"
+                            @change="(e: any) => setGroupRevealedForGroup(group, (e.target as HTMLInputElement).checked)"
                             :disabled="selectedRequest?.state !== 'request-received'"
                             class="sr-only peer"
                           >
@@ -216,21 +216,21 @@
                 <!-- Attribute by Attribute Selection -->
                 <div class="space-y-4">
                   <div 
-                    v-for="attrName in (attrConfig.names || (attrConfig.name ? [attrConfig.name] : []))"
-                    :key="attrName"
+                    v-for="attr in group.attributes"
+                    :key="attr.referent + '-' + attr.name"
                     class="bg-white/5 rounded p-3 border border-white/5"
                   >
                     <div class="grid grid-cols-[200px_1fr_auto] gap-4 items-center">
                       <!-- Attribute Name -->
                       <div class="flex items-center">
-                        <span class="text-white font-medium text-sm">{{ attrName }}</span>
+                        <span class="text-white font-medium text-sm">{{ attr.name }}</span>
                       </div>
 
                       <!-- Value Selection -->
                       <div>
                           <Select 
-                            :model-value="attributeSelections[referent]?.[attrName!]?.credentialReferent || ''"
-                            @update:modelValue="(value) => value && attrName && selectAttributeValue(referent, attrName, String(value))"
+                            :model-value="attributeSelections[attr.referent]?.[attr.name]?.credentialReferent || ''"
+                            @update:modelValue="(value: any) => value && selectAttributeValue(attr.referent, attr.name, String(value), group)"
                             :disabled="selectedRequest?.state !== 'request-received'"
                           >
                             <SelectTrigger 
@@ -238,15 +238,15 @@
                               :disabled="selectedRequest?.state !== 'request-received'"
                             >
                               <SelectValue placeholder="Selecione o valor">
-                                <template v-if="attrName && attributeSelections[referent]?.[attrName]?.value">
-                                  <span class="text-sm">{{ attributeSelections[referent][attrName].value }}</span>
+                                <template v-if="attributeSelections[attr.referent]?.[attr.name]?.value">
+                                  <span class="text-sm">{{ attributeSelections[attr.referent]?.[attr.name]?.value }}</span>
                                 </template>
                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent class="bg-purple-900/95 backdrop-blur-md border-white/30 shadow-xl max-h-64">
                               <SelectGroup>
                                 <SelectItem
-                                  v-for="option in attrName ? getAvailableValuesForAttribute(referent, attrName, attrConfig.restrictions) : []"
+                                  v-for="option in getAvailableValuesForAttribute(attr.referent, attr.name, attr.restrictions)"
                                   :key="option.credReferent + '-' + option.value"
                                   :value="option.credReferent"
                                   class="!text-white hover:!bg-purple-600/60 focus:!bg-purple-600/70 focus:!text-white data-[highlighted]:bg-purple-600/60 data-[highlighted]:!text-white cursor-pointer transition-colors"
@@ -262,13 +262,13 @@
                       </div>
 
                       <!-- Revealed Toggle -->
-                            <div v-if="!(attrConfig.names && attrConfig.names.length > 0)" class="flex items-center gap-2">
+                            <div v-if="!(group.isGroup && group.attributes.length > 1)" class="flex items-center gap-2">
                               <label class="relative inline-flex items-center cursor-pointer">
                                 <input 
                                   type="checkbox" 
-                                  :checked="attrName && attributeSelections[referent]?.[attrName]?.revealed ? true : true"
-                                  @change="(e) => attrName && toggleRevealed(referent, attrName, (e.target as HTMLInputElement).checked)"
-                                   :disabled="!attrName || !attributeSelections[referent]?.[attrName]?.value || selectedRequest?.state !== 'request-received'"
+                                  :checked="attributeSelections[attr.referent]?.[attr.name]?.revealed ? true : true"
+                                  @change="(e: any) => toggleRevealed(attr.referent, attr.name, (e.target as HTMLInputElement).checked)"
+                                   :disabled="!attributeSelections[attr.referent]?.[attr.name]?.value || selectedRequest?.state !== 'request-received'"
                                   class="sr-only peer"
                                 >
                                 <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
@@ -279,11 +279,11 @@
 
                     <!-- No values available -->
                     <div 
-                      v-if="attrName && getAvailableValuesForAttribute(referent, attrName, attrConfig.restrictions).length === 0"
+                      v-if="getAvailableValuesForAttribute(attr.referent, attr.name, attr.restrictions).length === 0"
                       class="mt-2 p-2 bg-red-500/20 border border-red-500/30 rounded text-red-200 text-xs flex items-center gap-2"
                     >
                       <AlertCircle class="w-3 h-3" />
-                      <span>Nenhuma credencial disponível com o atributo "{{ attrName }}"</span>
+                      <span>Nenhuma credencial disponível com o atributo "{{ attr.name }}"</span>
                     </div>
                   </div>
                 </div>
@@ -324,7 +324,7 @@
                     
                     <Select 
                       v-model="predicateSelections[referent]"
-                      @update:modelValue="(value) => value && updatePredicateSelection(referent, String(value))"
+                      @update:modelValue="(value: any) => value && updatePredicateSelection(referent, String(value))"
                       :disabled="getMatchingCredentialsForReferent(referent, predConfig.restrictions).length === 0"
                     >
                       <SelectTrigger 
@@ -420,6 +420,17 @@ interface AttributeSelection {
   revealed: boolean
 }
 
+interface GroupedAttribute {
+  groupKey: string
+  displayName: string
+  attributes: Array<{
+    referent: string
+    name: string
+    restrictions?: Restriction[]
+  }>
+  isGroup: boolean
+}
+
 // State
 const selectedRequest = ref<ProofRequest | null>(null)
 const loadingCredentials = ref(false)
@@ -427,18 +438,107 @@ const loadingCredentials = ref(false)
 const attributeSelections = ref<Record<string, Record<string, AttributeSelection>>>({})
 const predicateSelections = ref<Record<string, string>>({})
 
+// Computed para agrupar atributos por prefixo
+const groupedAttributes = computed(() => {
+  if (!selectedRequest.value) return []
+  
+  const groups: GroupedAttribute[] = []
+  const processedReferents = new Set<string>()
+  const requestedAttrs = selectedRequest.value.requested_attributes
+  
+  // Primeiro, identifica grupos com 'names'
+  Object.keys(requestedAttrs).forEach(referent => {
+    const attrConfig = requestedAttrs[referent]
+    if (attrConfig?.names && attrConfig.names.length > 0) {
+      groups.push({
+        groupKey: referent,
+        displayName: referent,
+        attributes: attrConfig.names.map((name: string) => ({
+          referent,
+          name,
+          restrictions: attrConfig.restrictions
+        })),
+        isGroup: true
+      })
+      processedReferents.add(referent)
+    }
+  })
+  
+  // Agrupa atributos com mesmo prefixo (ex: dados_aluno_RA, dados_aluno_NomeAluno)
+  const ungroupedReferents = Object.keys(requestedAttrs).filter(r => !processedReferents.has(r))
+  const prefixMap = new Map<string, string[]>()
+  
+  ungroupedReferents.forEach(referent => {
+    // Tenta encontrar um prefixo (parte antes do último underscore)
+    const parts = referent.split('_')
+    if (parts.length > 1) {
+      const potentialPrefix = parts.slice(0, -1).join('_')
+      // Verifica se existe outro atributo com o mesmo prefixo
+      const hasSamePrefix = ungroupedReferents.some(r => 
+        r !== referent && r.startsWith(potentialPrefix + '_')
+      )
+      
+      if (hasSamePrefix) {
+        if (!prefixMap.has(potentialPrefix)) {
+          prefixMap.set(potentialPrefix, [])
+        }
+        prefixMap.get(potentialPrefix)!.push(referent)
+      }
+    }
+  })
+  
+  // Cria grupos para os prefixos encontrados
+  prefixMap.forEach((referents: string[], prefix: string) => {
+    const attributes = referents.map((ref: string) => {
+      const attrConfig = requestedAttrs[ref]
+      const attrName = attrConfig?.name || ref.replace(prefix + '_', '')
+      return {
+        referent: ref,
+        name: attrName,
+        restrictions: attrConfig?.restrictions
+      }
+    })
+    
+    groups.push({
+      groupKey: prefix,
+      displayName: prefix,
+      attributes,
+      isGroup: true
+    })
+    
+    referents.forEach((r: string) => processedReferents.add(r))
+  })
+  
+  // Adiciona atributos individuais que não foram agrupados
+  ungroupedReferents.forEach(referent => {
+    if (!processedReferents.has(referent)) {
+      const attrConfig = requestedAttrs[referent]
+      if (attrConfig?.name) {
+        groups.push({
+          groupKey: referent,
+          displayName: referent,
+          attributes: [{
+            referent,
+            name: attrConfig.name,
+            restrictions: attrConfig.restrictions
+          }],
+          isGroup: false
+        })
+      }
+    }
+  })
+  
+  return groups
+})
+
 // Computed
 const canSubmitProof = computed(() => {
   if (!selectedRequest.value) return false
   
-  // Verifica se todos os atributos solicitados têm um valor selecionado
-  const allAttributesSelected = Object.keys(selectedRequest.value.requested_attributes).every(referent => {
-    const attrConfig = selectedRequest.value!.requested_attributes[referent]
-    if (!attrConfig) return false
-    const attrNames = attrConfig.names || (attrConfig.name ? [attrConfig.name] : [])
-    
-    return attrNames.every((attrName: string) => {
-      const selection = attributeSelections.value[referent]?.[attrName]
+  // Verifica se todos os atributos de todos os grupos têm valor selecionado
+  const allAttributesSelected = groupedAttributes.value.every((group: GroupedAttribute) => {
+    return group.attributes.every((attr: any) => {
+      const selection = attributeSelections.value[attr.referent]?.[attr.name]
       return selection?.credentialReferent && selection?.value
     })
   })
@@ -453,22 +553,18 @@ const canSubmitProof = computed(() => {
 
 // Methods
 // Toggle de revelação para grupo
-function getGroupRevealed(referent: string): boolean {
-  const selections = attributeSelections.value[referent]
-  if (!selections) return true
-  // Se todos são true, retorna true, senão false
-  for (const key in selections) {
-    if (selections[key] && !selections[key].revealed) return false
-  }
-  return true
+function getGroupRevealedForGroup(group: GroupedAttribute): boolean {
+  return group.attributes.every(attr => {
+    const selection = attributeSelections.value[attr.referent]?.[attr.name]
+    return selection?.revealed !== false
+  })
 }
 
-function setGroupRevealed(referent: string, revealed: boolean) {
-  const selections = attributeSelections.value[referent]
-  if (!selections) return
-  Object.keys(selections).forEach(attrName => {
-    if (selections[attrName]) {
-      selections[attrName].revealed = revealed
+function setGroupRevealedForGroup(group: GroupedAttribute, revealed: boolean) {
+  group.attributes.forEach(attr => {
+    const attrSelection = attributeSelections.value[attr.referent]?.[attr.name]
+    if (attrSelection) {
+      attrSelection.revealed = revealed
     }
   })
 }
@@ -481,30 +577,27 @@ async function selectProofRequest(request: ProofRequest) {
   attributeSelections.value = {}
   predicateSelections.value = {}
   
-  // Inicializa a estrutura de seleções para cada referent e atributo
-  Object.keys(request.requested_attributes).forEach(referent => {
-    const attrConfig = request.requested_attributes[referent]
-    if (!attrConfig) return
-    
-    attributeSelections.value[referent] = {}
-    const attrNames = attrConfig.names || (attrConfig.name ? [attrConfig.name] : [])
-    
-    attrNames.forEach(attrName => {
-      if (!attributeSelections.value[referent]) {
-        attributeSelections.value[referent] = {}
-      }
-      attributeSelections.value[referent][attrName] = {
-        attrName,
-        credentialReferent: null,
-        value: null,
-        revealed: true
-      }
-    })
-  })
-  
   loadingCredentials.value = true
   await proofStore.fetchAvailableCredentials(request.pres_ex_id)
   loadingCredentials.value = false
+  
+  // Inicializa a estrutura de seleções usando os grupos
+  groupedAttributes.value.forEach((group: GroupedAttribute) => {
+    group.attributes.forEach((attr: any) => {
+      if (!attributeSelections.value[attr.referent]) {
+        attributeSelections.value[attr.referent] = {}
+      }
+      const selections = attributeSelections.value[attr.referent]
+      if (selections) {
+        selections[attr.name] = {
+          attrName: attr.name,
+          credentialReferent: null,
+          value: null,
+          revealed: true
+        }
+      }
+    })
+  })
 }
 
 function closeDetailView() {
@@ -553,22 +646,46 @@ function getAvailableValuesForAttribute(
 }
 
 // Seleciona um valor para um atributo específico
-function selectAttributeValue(referent: string, attrName: string, credReferent: string) {
+function selectAttributeValue(referent: string, attrName: string, credReferent: string, group: GroupedAttribute) {
   if (!selectedRequest.value) return
   
   const credentials = proofStore.availableCredentials[selectedRequest.value.pres_ex_id] || []
   const selectedCred = credentials.find((c: AvailableCredential) => c.referent === credReferent)
   
-  if (selectedCred && attrName in selectedCred.attrs) {
-    if (!attributeSelections.value[referent]) {
-      attributeSelections.value[referent] = {}
-    }
-    
-    attributeSelections.value[referent][attrName] = {
-      attrName,
-      credentialReferent: credReferent,
-      value: selectedCred.attrs[attrName] || null,
-      revealed: attributeSelections.value[referent][attrName]?.revealed ?? true
+  if (!selectedCred) return
+  
+  if (group.isGroup && group.attributes.length > 1) {
+    group.attributes.forEach((attr: any) => {
+      if (!attributeSelections.value[attr.referent]) {
+        attributeSelections.value[attr.referent] = {}
+      }
+      
+      if (attr.name in selectedCred.attrs) {
+        const existingSelection = attributeSelections.value[attr.referent]?.[attr.name]
+        const attrValue = selectedCred.attrs[attr.name]
+        const selections = attributeSelections.value[attr.referent]
+        if (selections) {
+          selections[attr.name] = {
+            attrName: attr.name,
+            credentialReferent: credReferent,
+            value: attrValue || null,
+            revealed: existingSelection?.revealed ?? true
+          }
+        }
+      }
+    })
+  } else {
+    if (attrName in selectedCred.attrs) {
+      if (!attributeSelections.value[referent]) {
+        attributeSelections.value[referent] = {}
+      }
+      
+      attributeSelections.value[referent][attrName] = {
+        attrName,
+        credentialReferent: credReferent,
+        value: selectedCred.attrs[attrName] || null,
+        revealed: attributeSelections.value[referent][attrName]?.revealed ?? true
+      }
     }
   }
 }
@@ -702,49 +819,41 @@ async function submitProof() {
   const requestedAttributes: Record<string, { cred_id: string; revealed: boolean }> = {}
   const requestedPredicates: Record<string, { cred_id: string; timestamp?: number }> = {}
 
-  // Atributos
-  for (const referent of Object.keys(selectedRequest.value.requested_attributes)) {
-    const attrConfig = selectedRequest.value.requested_attributes[referent]
-    const selections = attributeSelections.value[referent]
-    if (!selections || !attrConfig) continue
-
-    const expectedAttrNames = attrConfig.names || (attrConfig.name ? [attrConfig.name] : [])
+  // Itera pelos grupos para construir a resposta correta
+  groupedAttributes.value.forEach((group: GroupedAttribute) => {
+    // Pega a primeira credencial selecionada do grupo (todas devem ser da mesma credencial)
+    const firstAttr = group.attributes[0]
+    if (!firstAttr) {
+      console.warn(`Grupo ${group.groupKey} não tem atributos`)
+      return
+    }
     
-    const allSelected = expectedAttrNames.every((attrName: string) => 
-      selections[attrName]?.credentialReferent
-    )
+    const firstSelection = attributeSelections.value[firstAttr.referent]?.[firstAttr.name]
     
-    if (!allSelected) {
-      console.warn(`Grupo ${referent} não tem todos os atributos selecionados`)
-      continue
+    if (!firstSelection?.credentialReferent) {
+      console.warn(`Grupo ${group.groupKey} não tem credencial selecionada`)
+      return
     }
 
-    let firstSelection: AttributeSelection | undefined
-    for (const attrName in selections) {
-      if (selections[attrName]?.credentialReferent) {
-        firstSelection = selections[attrName]
-        break
+    const credId = firstSelection.credentialReferent
+
+    // Para cada atributo do grupo, adiciona ao requestedAttributes
+    group.attributes.forEach((attr: any) => {
+      const selection = attributeSelections.value[attr.referent]?.[attr.name]
+      if (selection) {
+        requestedAttributes[attr.referent] = {
+          cred_id: credId,
+          revealed: selection.revealed ?? true
+        }
+        console.log(`Atributo ${attr.referent} adicionado:`, requestedAttributes[attr.referent])
       }
-    }
+    })
+  })
 
-    if (firstSelection?.credentialReferent) {
-      requestedAttributes[referent] = {
-        cred_id: firstSelection.credentialReferent,
-        revealed: firstSelection.revealed ?? true
-      }
-      console.log(`Atributo ${referent} adicionado:`, requestedAttributes[referent])
-    } else {
-      console.error(`Grupo ${referent} não tem credencial selecionada válida!`)
-    }
-  }
-
-  // Predicados
   for (const referent of Object.keys(selectedRequest.value.requested_predicates)) {
     const credId = predicateSelections.value[referent]
     if (credId) {
-      requestedPredicates[referent] = {
-        cred_id: credId
-      }
+      requestedPredicates[referent] = { cred_id: credId }
       console.log(`Predicado ${referent} adicionado:`, requestedPredicates[referent])
     } else {
       console.error(`Predicado ${referent} não tem credencial selecionada!`)
@@ -772,11 +881,9 @@ async function submitProof() {
     await loadProofRequests()
   } else {
     await loadProofRequests()
-    
     const updatedRequest = proofStore.proofRequests.find(
       (pr: ProofRequest) => pr.pres_ex_id === selectedRequest.value?.pres_ex_id
     )
-    
     if (updatedRequest) {
       selectedRequest.value = updatedRequest
     }
