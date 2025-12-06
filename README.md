@@ -7,7 +7,7 @@
 
 ## 📋 Sobre o Projeto
 
-Este projeto demonstra o funcionamento completo de um fluxo **Self-Sovereign Identity (SSI)** utilizando as tecnologias Hyperledger Indy e Aries Cloud Agent Python (ACA-Py). A implementação apresenta um ecossistema com três agentes principais que simulam cenários reais de emissão, armazenamento e verificação de credenciais digitais.
+Este projeto demonstra o funcionamento completo de um fluxo **Self-Sovereign Identity (SSI)** utilizando as tecnologias Hyperledger Indy e Aries Cloud Agent Python (ACA-Py). A implementação apresenta um ecossistema com quatro agentes principais que simulam cenários reais de emissão, armazenamento e verificação de credenciais digitais.
 
 ### 🎯 Objetivo
 
@@ -32,21 +32,25 @@ graph TB
     end
     
     subgraph "Agentes SSI"
+        G[Governance Endorser<br/>:8021]
         H[Holder Agent<br/>:8031]
         I[Issuer Agent<br/>:8041]
         IV[Issuer-Verifier Agent<br/>:8051]
     end
     
     subgraph "Aplicações Web"
+        GP[Governance Panel<br/>Vue.js]
         HP[Holder Panel<br/>Vue.js]
         IP[Issuer Panel<br/>Vue.js]
         IVP[Verifier Panel<br/>Vue.js]
     end
     
+    G <--> VN
     H <--> VN
     I <--> VN
     IV <--> VN
     
+    GP <--> G
     HP <--> H
     IP <--> I
     IVP <--> IV
@@ -73,30 +77,35 @@ graph TB
 ## 📁 Estrutura do Projeto
 
 ```
-tcc-poc-ssi-final/
+tcc-poc-ssi/
+├── 📁 clients/                     # Aplicações cliente
+│   ├── 📁 governance/              # Agente de governança (Endorser)
+│   │   ├── painel/                 # Interface Web (Vue.js)
+│   │   └── server/                 # API Backend (FastAPI)
+│   ├── 📁 holder/                  # Aplicação do portador
+│   │   ├── painel/                 # Interface Web (Vue.js)
+│   │   └── server/                 # API Backend (FastAPI)
+│   ├── 📁 issuer/                  # Aplicação do emissor
+│   │   ├── painel/                 # Interface Web (Vue.js)
+│   │   └── server/                 # API Backend (FastAPI)
+│   └── 📁 issuer-verifier/         # Aplicação do verificador/emissor
+│       ├── painel/                 # Interface Web (Vue.js)
+│       └── server/                 # API Backend (FastAPI)
 ├── 📁 docker/                      # Configurações Docker
 │   ├── docker-compose.yml          # Orquestração dos containers SSI
+│   ├── Dockerfile.fastapi          # Imagem para servidores FastAPI
+│   ├── Dockerfile.vue3             # Imagem para painéis Vue.js
+│   ├── Dockerfile.mongodb          # Imagem para MongoDB
 │   └── files-to-replace/           # Arquivos customizados para von-network
 │       ├── Dockerfile              # Build personalizado
 │       ├── docker-compose.yml      # Configuração von-network
 │       └── requirements.txt        # Dependências Python
-├── 📁 db/                          # Bancos de dados locais
-│   ├── holder.db                   # Dados do agente Holder
-│   ├── issuer.db                   # Dados do agente Issuer
-│   └── verifier-issuer.db          # Dados do agente Verifier-Issuer
 ├── 📁 shared/                      # Dependências compartilhadas
 │   └── requirements.txt            # Requisitos Python do projeto
-├── 📁 src/                         # Código fonte das aplicações
-│   ├── 📁 holder/                  # Aplicação do portador
-│   │   ├── api/                    # API Backend (FastAPI)
-│   │   └── painel/                 # Interface Web (Vue.js)
-│   ├── 📁 issuer/                  # Aplicação do emissor
-│   │   ├── api/                    # API Backend (FastAPI)
-│   │   └── painel/                 # Interface Web (Vue.js)
-│   └── 📁 issuer-verifier/         # Aplicação do verificador/emissor
-│       ├── api/                    # API Backend (FastAPI)
-│       └── painel/                 # Interface Web (Vue.js)
-└── make                            # Script de automação e gerenciamento
+├── 📁 von-network/                 # Rede Hyperledger Indy (clonada)
+├── Makefile                        # Comandos de automação
+├── shikan.sh                       # Script auxiliar de gerenciamento
+└── README.md                       # Este arquivo
 ```
 
 ## 🔧 Pré-requisitos
@@ -123,15 +132,8 @@ git --version && curl --version
 ### 1. Inicialização Completa do Ambiente
 
 ```bash
-# Dar permissão de execução ao script
-chmod +x make
-
 # Iniciar todo o ambiente SSI
-./make
-# Selecione: alias
-
-stw
-# Seleciona: container -> run
+make run
 ```
 
 **O que acontece automaticamente:**
@@ -149,8 +151,9 @@ stw
 Após a inicialização bem-sucedida, acesse:
 
 | Serviço | URL | Descrição |
-|---------|-----|-----------|
+|---------|-----|-----------||
 | **von-network** | [http://localhost:9000](http://localhost:9000) | Interface da blockchain Indy |
+| **Governance Endorser** | [http://localhost:8021](http://localhost:8021) | API Swagger do Endorser |
 | **Holder Agent** | [http://localhost:8031](http://localhost:8031) | API Swagger do Portador |
 | **Issuer Agent** | [http://localhost:8041](http://localhost:8041) | API Swagger do Emissor |
 | **Verifier Agent** | [http://localhost:8051](http://localhost:8051) | API Swagger do Verificador |
@@ -159,16 +162,13 @@ Após a inicialização bem-sucedida, acesse:
 
 ```bash
 # Parar todos os containers
-stw
-# Selecione: container -> stop
+make stop
 
 # Limpeza completa (containers, volumes, imagens)
-stw
-# Selecione: container -> clear
+make clear
 
 # Ajuda detalhada
-stw
-# Selecione: container -> help
+make help
 ```
 
 ## 🔄 Fluxo de Demonstração SSI
@@ -190,17 +190,21 @@ stw
 3. **Verifier** valida a prova matematicamente
 4. **Verifier** emite nova credencial baseada na prova (ex: matrícula)
 
-## 🛠️ Funcionalidades do Script `make`
+## 🛠️ Funcionalidades do Makefile
 
-O script `make` é uma ferramenta completa para gerenciar o projeto:
+O Makefile é a ferramenta principal para gerenciar o projeto:
 
-### Módulos Disponíveis
+### Comandos Disponíveis
 
 #### 🐳 Container Management
-- **`run`** - Inicia ambiente SSI completo
-- **`stop`** - Para todos os containers
-- **`clear`** - Remove containers e volumes
-- **`help`** - Documentação detalhada
+- **`make run`** - Inicia ambiente SSI completo
+- **`make stop`** - Para todos os containers
+- **`make clear`** - Remove containers e volumes
+- **`make help`** - Documentação detalhada
+
+### Script Auxiliar shikan.sh
+
+O projeto também inclui o script `shikan.sh` para operações avançadas de Git:
 
 #### 🌿 Git Operations
 - **`branch`** - Cria branches com convenção de commits
@@ -208,9 +212,13 @@ O script `make` é uma ferramenta completa para gerenciar o projeto:
 - **`push`** - Push para repositório remoto
 - **`deploy`** - Versionamento e release
 
-#### ⚙️ Utilitários
-- **`alias`** - Instala comando global `stw` (steward)
-- **`help`** - Ajuda geral do sistema
+```bash
+# Dar permissão de execução
+chmod +x shikan.sh
+
+# Executar
+./shikan.sh
+```
 
 ## 🔍 Detalhes Técnicos
 
@@ -230,10 +238,16 @@ Cada agente roda com configurações específicas:
 - **Ports**: 9701-9708 para comunicação entre nodes
 - **Web Interface**: Porta 9000 para visualização
 
+### Agente de Governança (Endorser)
+
+- **Função**: Trustee com poder de endossar transações na ledger
+- **Seed**: `00000000000000GovernanceEndorser`
+- **Porta**: 8021
+- **Uso**: Gerenciamento de schemas, definições de credenciais e permissões
+
 ### Segurança e Desenvolvimento
 
 ⚠️ **Aviso de Segurança**: Este ambiente é configurado para **desenvolvimento apenas**:
-- Modo `admin-insecure-mode` habilitado
 - Seeds fixas para reprodutibilidade
 - Auto-aceitar convites e credenciais
 
@@ -244,18 +258,6 @@ Cada agente roda com configurações específicas:
 - `feat(escopo): nova funcionalidade`
 - `fix(escopo): correção de bug`
 - `chore(escopo): manutenção, config, deps`
-
-## 📚 Recursos Adicionais
-
-### Documentação Oficial
-- [Hyperledger Indy](https://hyperledger-indy.readthedocs.io/)
-- [Aries Cloud Agent Python](https://aries-cloudagent-python.readthedocs.io/)
-- [von-network](https://github.com/bcgov/von-network)
-
-### Conceitos SSI
-- [Self-Sovereign Identity Principles](https://www.lifewithalacrity.com/2016/04/the-path-to-self-soverereign-identity.html)
-- [Verifiable Credentials Data Model](https://www.w3.org/TR/vc-data-model/)
-- [Decentralized Identifiers (DIDs)](https://www.w3.org/TR/did-core/)
 
 ## 📄 Licença
 
@@ -268,15 +270,3 @@ Desenvolvido como parte do Trabalho de Conclusão de Curso (TCC) em Ciência da 
 ---
 
 ⭐ **Se este projeto foi útil, considere dar uma estrela no repositório!**
-
-🔗 **Links Rápidos**: [Documentação](README.md) | [Issues](issues) | [Discussions](discussions)
-
-
-
-## A Fazer
-
-migrar escopo de recebimento de URL
-
-migrar escopo do issuer
-
-iniciar escopo do issuer-verifier
