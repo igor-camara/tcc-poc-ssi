@@ -86,7 +86,7 @@ services:
     
     command: >
       start
-        --label "HolderWallet"
+        --label "Cornellius Almeida Júnior"
         --endpoint http://holder:8030
         --inbound-transport http 0.0.0.0 8030
         --outbound-transport http

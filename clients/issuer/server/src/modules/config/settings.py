@@ -28,7 +28,7 @@ class Settings:
         
         self.database_url = os.getenv("DATABASE_URL", f"sqlite:///{DB_PATH}")
 
-        self.company_name = os.getenv("COMPANY_NAME", "Emissor SSI")
+        self.company_name = os.getenv("COMPANY_NAME", "Poupando Tempo")
 
     @property
     def governance_api_key(self) -> str:

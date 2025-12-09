@@ -60,9 +60,9 @@
               <Button type="button" @click="addProofItem('predicate')" size="sm" class="bg-orange-600 hover:bg-orange-700 cursor-pointer text-white">
                 <Plus class="w-4 h-4 mr-1" /> Predicado
               </Button>
-              <Button type="button" @click="addProofItem('self_attested')" size="sm" class="bg-teal-600 hover:bg-teal-700 cursor-pointer text-white">
+              <!--<Button type="button" @click="addProofItem('self_attested')" size="sm" class="bg-teal-600 hover:bg-teal-700 cursor-pointer text-white">
                 <Plus class="w-4 h-4 mr-1" /> Auto-Atestado
-              </Button>
+              </Button>-->
             </div>
           </div>
 

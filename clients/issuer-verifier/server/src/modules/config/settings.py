@@ -28,7 +28,7 @@ class Settings:
         
         self.database_url = os.getenv("DATABASE_URL", f"sqlite:///{DB_PATH}")
 
-        self.company_name = os.getenv("COMPANY_NAME", "Verificador SSI")
+        self.company_name = os.getenv("COMPANY_NAME", "Instituição Agreta")
 
         self.enable_proof_scheduler = os.getenv("ENABLE_PROOF_SCHEDULER", "true").lower() == "true"
         self.proof_check_interval = int(os.getenv("PROOF_CHECK_INTERVAL", "30"))  # 1 minuto
