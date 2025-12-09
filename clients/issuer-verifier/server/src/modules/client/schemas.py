@@ -906,3 +906,26 @@ class ClientVerify(Base):
         except Exception as e:
             logging.exception(f"Erro inesperado: {e}")
             return None
+    
+    def send_problem_report(self, pres_ex_id: str, description: str = "Request timed out"):
+        endpoint = f"{self.url}/present-proof-2.0/records/{pres_ex_id}/problem-report"
+        body = {
+            "description": description
+        }
+
+        logging.info(f"Enviando problem report para {endpoint}")
+
+        try:
+            response = httpx.post(endpoint, json=body, headers=self._get_headers(), timeout=10.0)
+            response.raise_for_status()
+            logging.info(f"Problem report enviado com sucesso para prova {pres_ex_id}.")
+            return self._fields(response.json(), ["pres_ex_id", "connection_id", "state", "updated_at"])
+        except httpx.HTTPStatusError as e:
+            logging.error(f"Falha ao enviar problem report. Corpo da resposta: {e.response.text}")
+            return None
+        except httpx.RequestError as e:
+            logging.error(f"Erro de conexão com o ACA-Py: {e}")
+            return None
+        except Exception as e:
+            logging.exception(f"Erro inesperado: {e}")
+            return None

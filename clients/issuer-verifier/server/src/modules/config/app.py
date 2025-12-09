@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import APIRouter
+from contextlib import asynccontextmanager
 
 from modules.config.settings import settings
 from modules.utils.model import SuccessResponse
@@ -12,10 +13,21 @@ from modules.connection import routes as connection_routes
 from modules.ledger import routes as ledger_routes
 from modules.proof import routes as proof_routes
 from modules.webhook import routes as webhook_routes
+from modules.scheduler import start_scheduler
+from modules.scheduler.service import stop_scheduler
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Gerencia o ciclo de vida da aplicação"""
+    # Startup: Inicia o scheduler
+    start_scheduler()
+    yield
+    # Shutdown: Para o scheduler
+    await stop_scheduler()
 
 def create_app() -> FastAPI:
     """Create and configure FastAPI application"""
-    app = FastAPI()
+    app = FastAPI(lifespan=lifespan)
     app.title = "Holder API"
 
     app.add_middleware(

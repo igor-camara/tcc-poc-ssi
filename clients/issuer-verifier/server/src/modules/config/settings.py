@@ -30,6 +30,10 @@ class Settings:
 
         self.company_name = os.getenv("COMPANY_NAME", "Verificador SSI")
 
+        self.enable_proof_scheduler = os.getenv("ENABLE_PROOF_SCHEDULER", "true").lower() == "true"
+        self.proof_check_interval = int(os.getenv("PROOF_CHECK_INTERVAL", "30"))  # 1 minuto
+        self.proof_request_timeout = int(os.getenv("PROOF_REQUEST_TIMEOUT", "90"))  # 1.5 minutos
+
     @property
     def governance_api_key(self) -> str:
         return os.environ.get("GOVERNANCE_API_KEY", self._governance_api_key)
